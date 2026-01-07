@@ -1,0 +1,1566 @@
+Drive Indicator AI 技術資料
+
+1. 概要 (Overview)
+
+1.1 Drive Indicator AI とは
+  Drive Indicator AI は、Windows のストレージ I/O (読み取り・書き込み) 状況をタスクトレイのアイコンでリアルタイムに可視化する軽量ユーティリティです。
+  通常のディスクだけでなく、一般的な監視方法では取得が難しい RAMドライブ の I/O を ETW (Event Tracing for Windows) で高精度に監視できる点が最大の特徴です。
+  また、DPI 対応・多言語対応・自動起動・ログ機能など、実用性と拡張性を重視した設計になっています。
+  このアプリケーションの作成のきっかけですが、フリーソフトの同様の機能を持ったアプリケーションを使用していましたが、アイコンの並びが思い通りでなかったり、OS が Windows11 に変わり正しく動作しなくなったことで、 ｢いっそのこと自分で作ってみては？｣ と思い立ち、AI の Copilot に相談したところ、 ｢簡単にできますよ！｣ と回答があったので、作成に着手しました。
+  AI の Copilot の協力に感謝の意を込めアプリケーション名の末尾に AI の文字を付加しました。
+  
+
+1.2 主な特徴 (技術的視点)
+  1. 高精度な I/O 監視
+    ･ PerformanceCounter による通常ドライブの I/O 監視
+    ･ ETW (FileIORead / FileIOWrite) による RAMドライブ 監視
+    ･ DriveStatus に統合し、TrayIconManager に渡す構造
+
+  2. DPI 完全対応
+    ･ DPI に応じて 16px / 32px アイコンを自動切り替え
+    • IconRenderer が DPI を判定し、最適な描画を実施
+    • フォントは GraphicsUnit.Pixel を使用し DPI 差を吸収
+
+  3. 多言語対応 (JSON ベース)
+    ･ ApplicationFolder/Resources/Language フォルダー内の languages.json と lang_xx.json ファイルを読み込む
+    ･ LangManager が翻訳テーブルを管理
+    ･ UIテキスト はすべてキーで管理され、拡張が容易
+
+  4. 自動実行 (タスクスケジューラ方式)
+    • StartupHelper が XML を生成し "schtasks.exe" を実行
+    • 権限不要・UAC の影響なし
+    • レジストリ Run キーより安全で確実
+
+  5. ログ機能 (ローテーション付き)
+    ･ %TEMP%/DriveIndicatorAI/Log フォルダー にログを保存
+    ･ 1MB 超で .old にローテーション
+    ･ スレッドセーフな書き込み
+
+1.3 全体アーキテクチャの特徴
+  Drive Indicator AI は、以下のような 明確な責務分離 に基づいて設計されています。
+    ･ SettingsManager   : 設定の読み書き・永続化
+    • DriveMonitor      : I/O 監視 (PerfCounter + ETW)
+    • IconRenderer      : DPI 対応アイコン描画
+    • TrayIconManager   : 通知領域アイコンの管理・更新
+    • LangManager       : 多言語テキスト管理
+    • LogHelper         : ログ管理 (ローテーション付き)
+    • UI (SettingsForm / VersionInfoForm / LicenseDialog)
+                        :ユーザー操作と設定変更
+  この構造により、UI とロジックが完全に分離され、拡張性・保守性が非常に高いアプリになっています。
+
+1.4 データフロー概要 (簡易版)
+    ┌─────────┐
+    │ SettingsManager  │ ← 設定読み込み
+    └────┬────┘
+              │
+              ▼
+    ┌─────────┐
+    │   DriveMonitor   │ ← PerfCounter / ETW
+    └────┬────┘
+              │ DriveStatus[]
+              ▼
+    ┌─────────┐
+    │   IconRenderer   │ ← DPI に応じて描画
+    └────┬────┘
+              │ Icon[]
+              ▼
+    ┌─────────┐
+    │ TrayIconManager  │ ← 通知領域に反映
+    └─────────┘
+
+
+2. アーキテクチャ構成図 (Architecture Overview)
+  Drive Indicator AI は、
+    監視 → 状態更新 → アイコン描画 → 通知領域更新
+  という一連の処理を、複数の独立したコンポーネントが協力して実現する構造になっています。
+  ここでは、全体構造を ｢コンポーネント図｣ ｢クラス依存関係図｣ ｢処理フロー図｣ の3つに分けて説明します。
+
+2.1 コンポーネント構成図 (Component Diagram)
+    ┌──────────────┐
+    │      SettingsManager       │
+    │  設定の読み書き・永続化    │
+    └──────┬───────┘
+                  │
+                  ▼
+    ┌──────────────┐
+    │        DriveMonitor        │
+    │ ・PerformanceCounter 監視  │
+    │ ・ETW (RAMドライブ) 監視   │
+    │  → DriveStatus[] を生成   │
+    └──────┬───────┘
+                  │
+                  ▼
+    ┌──────────────┐
+    │        IconRenderer        │
+    │ ・DPI判定 (16px / 32px)    │
+    │ ・PNG合成描画              │
+    │ ・フォント描画(FontHelper) │
+    │  → Icon[] を生成          │
+    └──────┬───────┘
+                  │
+                  ▼
+    ┌──────────────┐
+    │       TrayIconManager      │
+    │ ・通知領域アイコンの管理   │
+    │ ・コンテキストメニュー     │
+    │ ・アイコン更新ループ       │
+    └──────────────┘
+
+2.2 クラス依存関係図 (Class Dependency Diagram)
+    SettingsManager
+          ▲
+          │  設定値を参照
+          │
+     DriveMonitor ───────┐
+          │                    │ DriveStatus[]
+          ▼                    ▼
+    EtwRamIoMonitor        IconRenderer ────→ FontHelper
+          │                    │
+          │ ETWイベント        │ Icon
+          ▼                    ▼
+       LogHelper ←─── TrayIconManager
+
+  依存関係のポイント
+    ･ TrayIconManager はアプリの中心で、DriveMonitor と IconRenderer の両方を使う
+    ･ DriveMonitor は PerfCounter と ETW を統合
+    ･ IconRenderer は FontHelper を利用
+    ･ LogHelper は全コンポーネントから参照される (横断的関心事)
+    ･ SettingsManager は全体の設定を提供する基盤
+
+2.3 処理フロー図 (監視 → 描画 → 表示)
+  Drive Indicator AI のメインループは以下のように動作します。
+    ───────────────────
+                  アプリ起動
+                      │
+                      ▼
+              SettingsManager.Load()
+                      │
+                      ▼
+              TrayIconManager.Start()
+                      │
+                      ▼
+    ───────────────────
+      メインループ (一定間隔で繰り返し)   
+    ───────────────────
+                      │
+                      ▼
+          DriveMonitor.Update()
+          ･ PerfCounter で I/O 取得
+          ･ ETW で RAMドライブ I/O 取得
+          → DriveStatus[] を生成
+                      │
+                      ▼
+    IconRenderer.RenderIcons(DriveStatus[])
+              ･ PNG 読み込み
+              ･ DPI に応じて描画
+              ･ DriveLetter を描画
+              → Icon[]
+                      │
+                      ▼
+      TrayIconManager.UpdateIcons(Icon[])
+          ・通知領域アイコンを更新
+    ───────────────────
+
+2.4 アーキテクチャの特徴 (まとめ)
+  ･ 責務分離が明確
+    UI / 設定 / 監視 / 描画 / ログ が完全に独立
+  ･ 拡張性が高い
+    新しい言語・アイコンテーマ・監視方式を追加しやすい
+  ･ DPI 対応が堅牢
+    IconRenderer と FontHelper が DPI 差を吸収
+  ･ RAMドライブ 監視が強力
+    ETW を使うことで一般的なツールでは取得できない情報を取得可能
+  ･ ログが全体を支える
+    例外や内部動作をすべて記録し、デバッグしやすい
+
+
+3. 主要コンポーネントの詳細 (Core Components)
+  Drive Indicator AI は、複数の独立したコンポーネントが協調して動作する構造になっています。
+  ここでは、各コンポーネントの役割・内部構造・他コンポーネントとの関係を詳しく説明します。
+
+3.1 SettingsManager — 設定管理の中核
+  3.1.1 役割
+    ･ 設定ファイル (JSON) の読み書き
+    ･ 設定値の永続化
+    ･ デフォルト値の提供
+    ･ 言語・DPI・ログ設定など、アプリ全体の動作に影響する値を保持
+
+  3.1.2 主な機能
+    ･ Load()    : 設定ファイルを読み込む
+    ･ Save()    : 設定ファイルに書き込む
+    ･ Current   : 現在の設定インスタンス
+    ･ DefLangCode / DefLangName  : 言語のデフォルト値
+    ･ SizeChangeDpi  : DPI 切り替え閾値 (16px ↔ 32px)
+
+  3.1.3 他コンポーネントとの関係
+    ･ TrayIconManager  : 更新間隔・監視対象ドライブを参照
+    ･ IconRenderer     : DPI 値を参照
+    ･ LangManager      : 言語コードを参照
+    ･ LogHelper        : ログ有効/無効を参照
+    アプリ全体の設定の“単一情報源 (Single Source of Truth)”になっている。
+
+3.2 TrayIconManager — 通知領域アイコンの管理者
+  3.2.1 役割
+    ･ タスクトレイアイコンの生成・更新
+    ･ コンテキストメニューの構築
+    ･ DriveMonitor と IconRenderer を連携させる中心的存在
+    ･ アプリのメインループを管理
+
+  3.2.2 主な機能
+    ･ Start()             : 監視とアイコン更新ループを開始
+    ･ UpdateIcons()       : IconRenderer で生成したアイコンをトレイに反映
+    ･ PrepareTempIcons()  : アイコン PNG を TEMP に展開
+    ･ ApplyLanguage()     : メニューの多言語化
+    ･ Dispose()           : アイコン破棄・ETW 停止
+
+  3.2.3 他コンポーネントとの関係
+    ･ DriveMonitor     : DriveStatus[] を取得
+    ･ IconRenderer     : アイコン描画を依頼
+    ･ SettingsManager  : 更新間隔・監視対象ドライブを参照
+    ･ LangManager      : メニューの翻訳
+    ･ LogHelper        : 内部動作をログ出力
+    Drive Indicator AI の“司令塔”にあたるコンポーネント。
+
+3.3 DriveMonitor — I/O 監視の中心
+  3.3.1 役割
+    ･ 各ドライブの I/O 状態を取得し、DriveStatus にまとめる
+    ･ 通常ドライブ → PerformanceCounter
+    ･ RAMドライブ  → ETW (EtwRamIoMonitor)
+
+  3.3.2 主な機能
+    ･ Update()          : 全ドライブの I/O を取得
+    ･ GetDriveStatus()  : DriveStatus を生成
+    ･ StartEtwMonitor() / StopEtwMonitor()  : RAMドライブ 監視
+
+  3.3.3 DriveStatus の内容
+    ･ DriveLetter
+    ･ IsReadActive
+    ･ IsWriteActive
+    ･ ReadBytes
+    ･ WriteBytes
+
+  3.3.4 他コンポーネントとの関係
+    ･ EtwRamIoMonitor  : RAMドライブ の I/O を取得
+    ･ TrayIconManager  : DriveStatus[] を渡す
+    ･ SettingsManager  : 監視対象ドライブを参照
+    ･ LogHelper        : 監視エラーを記録
+    Drive Indicator AI の“センサー”にあたるコンポーネント。
+
+3.4 EtwRamIoMonitor — RAMドライブ 専用の高精度監視
+  3.4.1 役割
+    ･ ETW (Event Tracing for Windows) を使って RAMドライブ の I/O を監視
+    ･ FileIORead / FileIOWrite イベントを解析
+    ･ DriveMonitor に I/O 情報を提供
+
+  3.4.2 主な機能
+    ･ Start()         : ETW セッション開始
+    ･ Stop()          : ETW セッション停止
+    ･ ProcessEvent()  : イベント解析
+    ･ CancellationToken による安全な停止
+
+  3.4.3 技術的特徴
+    ･ TraceEventSession を使用
+    ･ セッション名の衝突を回避
+    ･ RAMドライブ の I/O を正確に取得できる (一般的なツールでは困難)
+    Drive Indicator AI の“高度な監視能力”を支える重要コンポーネント。
+
+3.5 IconRenderer — DPI 対応アイコン描画の中心
+  3.5.1 役割
+    ･ DriveStatus に応じて PNG を合成し、アイコンを生成
+    ･ DPI に応じて 16px / 32px を自動切り替え
+    ･ DriveLetter をフォント描画
+    ･ Win32 DestroyIcon でハンドルを安全に破棄
+
+  3.5.2 主な機能
+    ･ RenderIcons()     : 複数ドライブをまとめてアイコン化
+    ･ RenderIcon()      : 1つのアイコンを描画
+    ･ LoadDriveImage()  : PNG 読み込み
+    ･ IconSize / DriveSize / LetterSize  : DPI に応じたサイズ計算
+
+  3.5.3 他コンポーネントとの関係
+    ･ FontHelper       : フォントキャッシュ
+    ･ SettingsManager  : DPI・文字色
+    ･ TrayIconManager  : 描画結果を渡す
+    Drive Indicator AI の“見た目”を作るコンポーネント。
+
+3.6 FontHelper — DPI に応じたフォントキャッシュ
+  3.6.1 役割
+    ･ DPI に応じたフォントをキャッシュし、無駄な生成を防ぐ
+    ･ GraphicsUnit.Pixel を使用し DPI 差を吸収
+
+  3.6.2 主な機能
+    ･ GetDriveLetterFontCache()  : キャッシュから取得
+    ･ FontCreat()   : フォント生成
+    ･ ClearCache()  : Dispose + キャッシュクリア
+    DPI 環境でも文字が美しく表示される理由がここにある。
+
+3.7 LogHelper — ログ管理 (ローテーション付き)
+  3.7.1 役割
+    ･ TEMP にログを保存
+    ･ 1MB 超で .old にローテーション
+    ･ スレッドセーフな書き込み
+
+  3.7.2 主な機能
+    ･ LogWrite()  : ログ書き込み
+    ･ ClearLog()  : ログ削除
+    ･ ログフォルダの自動生成
+    Drive Indicator AI の“透明性”と“デバッグ容易性”を支える。
+
+3.8 LangManager — JSON ベースの多言語対応
+  3.8.1 役割
+    ･ 言語ファイル (lang_xx.json) を読み込み
+    ･ 翻訳テーブルを管理
+    ･ UI テキストをキーで取得
+
+  3.8.2 主な機能
+    ･ Lang.Load()          : 翻訳テーブル読み込み
+    ･ Lang.T()             : 翻訳文字列取得
+    ･ LoadLanguagesJson()  : 言語一覧読み込み
+    ･ 言語名 ↔ 言語コードの相互変換
+    Drive Indicator AI の国際化を支える基盤。
+
+
+4. UI コンポーネント (User Interface Components)
+  Drive Indicator AI の UI は、ユーザー操作を最小限に抑えつつ、設定変更･バージョン確認･ライセンス確認など必要な機能を提供するよう設計されています。
+  UI コンポーネントは以下の 3 つで構成されます :
+    1. SettingsForm (設定画面)
+    2. VersionInfoForm (バージョン情報)
+    3. LicenseDialog (ライセンス表示)
+  これらはすべて TrayIconManager のコンテキストメニューから起動され、アプリ本体のロジックとは疎結合になっています。
+
+4.1 SettingsForm — 設定画面
+  4.1.1 役割
+    • アプリの設定をユーザーが変更するための UI
+    • SettingsManager と連携して設定を読み書き
+    • 言語切り替え・DPI サンプル表示など、Drive Indicator AI の中で最も複雑な UI
+
+  4.1.2 主な機能
+    • 監視対象ドライブの選択
+    • 表示間隔 (更新周期) の設定
+    • アイコンフォルダの選択
+    • ドライブ文字の色設定
+    • 言語選択 (日本語 / 英語)
+    • 自動起動 (タスクスケジューラ登録)
+    • ログ有効化
+    • DPI に応じたサンプルアイコンの描画 (PictureBox)
+
+  4.1.3 技術的ポイント
+    1. 言語切り替え (ApplyLanguage) 
+      SettingsForm は LangManager を利用して UI テキストを更新します。
+        • コンボボックスの言語名
+        • ラベル・ボタンのテキスト
+        • メッセージボックスの文言
+      すべて JSON の翻訳テーブルから取得されます。
+    2. DPI サンプルアイコンの描画
+      PictureBox に表示されるサンプルアイコンは :
+        • IconRenderer と同じロジック
+        • FontHelper の DPI フォント
+        • PNG アイコンの合成
+      を使って描画されます。
+      これにより、実際のタスクトレイと同じ見た目を事前に確認できるようになっています。
+    3. 設定の保存
+      OK ボタンで SettingsManager.Save() が呼ばれ、設定ファイル (JSON) に永続化されます。
+
+4.2 VersionInfoForm — バージョン情報画面
+  4.2.1 役割
+    • アプリのバージョン情報を表示
+    • Github リンクを開く
+    • ライセンスダイアログを開く
+
+  4.2.2 主な機能
+    • FileVersionInfo からバージョン番号を取得
+    • Github リンクを既定ブラウザで開く
+    • LicenseDialog を非モーダルで表示
+
+  4.2.3 技術的ポイント
+    1. FileVersionInfo を使用したバージョン取得
+      ───────────────────────────────────
+      FileVersionInfo.GetVersionInfo(Application.ExecutablePath).FileVersion
+      ───────────────────────────────────
+      → AssemblyVersion ではなく FileVersion を使うことで、ユーザーに見せるバージョン番号を柔軟に管理できます。
+    2. 非モーダルダイアログの管理
+      LicenseDialog は再利用され、複数開かないように制御されています。
+
+4.3 LicenseDialog — ライセンス表示ダイアログ
+  4.3.1 役割
+    • ライセンス文を表示
+    • OK ボタンで閉じる
+
+  4.3.2 主な機能
+    • 言語コードに応じて日本語/英語のライセンス文を表示
+    • textBoxLicense は ReadOnly + ScrollBars.Vertical
+    • ControlBox = false で閉じる方法を統一
+
+  4.3.3 技術的ポイント
+    1. ライセンス文はハードコード
+      国際化は JSON ではなく、LicenseDialog 内で直接切り替えています。
+      理由 :
+        • ライセンス文はアプリの一部であり、外部ファイルに依存させない方が安全
+        • JSON の破損や翻訳漏れの影響を受けない
+    2. UI が壊れにくい構造
+      • DockStyle.Top のテキストボックス
+      • Anchor で固定された OK ボタン
+      • ControlBox = false で UX が明確
+
+4.4 UI コンポーネントの設計思想 (まとめ)
+  Drive Indicator AI の UI は、以下の特徴を持っています :
+    • ロジックと UI の完全分離
+        設定変更は SettingsManager、監視は DriveMonitor が担当し、UI はあくまで入力と表示に徹している。
+    • 多言語対応が自然に組み込まれている
+        LangManager による JSON ベースの翻訳。
+    • DPI 対応が UI にも反映されている
+        サンプルアイコン描画で DPI の違いを確認可能。
+    • 壊れにくい UI
+        Dispose、Anchor、Dock、ControlBox など WinForms の落とし穴を避けている。
+
+
+5. データフロー詳細 (Data Flow Details)
+  Drive Indicator AI は、
+    起動 → 設定読み込み → 監視開始 → アイコン描画 → 通知領域更新 → 終了処理
+  という一連の流れで動作します。
+  ここでは、アプリ内部でどのようにデータが流れ、どのコンポーネントがどのタイミングで動作するのかを詳しく説明します。
+
+5.1 アプリ起動 → 設定読み込み
+  アプリ起動時、Program.cs から以下の処理が行われます。
+    1. SettingsManager.Load()
+    2. LangManager.Load(languageCode)
+    3. TrayIconManager.Start()
+
+  5.1.1 SettingsManager.Load()
+    ･ 設定ファイル (JSON) を読み込み
+    ･ 読み込み失敗時はデフォルト値を使用
+    ･ 言語コード・監視対象ドライブ・更新間隔などをメモリに保持
+
+  5.1.2 LangManager.Load()
+    ･ Resources/Language/lang_xx.json を読み込み
+    ･ 翻訳テーブルを構築
+    ･ UI テキストの準備が整う
+
+  5.1.3 TrayIconManager.Start()
+    ･ アイコン PNG を TEMP に展開
+    ･ DriveMonitor を初期化
+    ･ アイコン更新ループを開始
+
+5.2 監視開始 → DriveStatus 更新
+  TrayIconManager のメインループでは、一定間隔で DriveMonitor.Update() が呼ばれます。
+
+  DriveMonitor.Update()
+    ├─ PerfCounter で通常ドライブの I/O を取得
+    ├─ EtwRamIoMonitor で RAMドライブ の I/O を取得
+    └─ DriveStatus[] を生成
+
+  5.2.1 PerformanceCounter の処理
+    ･ LogicalDisk の ReadBytes/sec
+    ･ LogicalDisk の WriteBytes/sec
+    ･ ドライブ文字ごとに値を取得
+    ･ 閾値を超えたら ｢読み取り/書き込みアクティブ｣ と判定
+
+  5.2.2 ETW の処理 (RAMドライブ )
+    ･ FileIORead / FileIOWrite イベントを監視
+    ･ DriveLetter を抽出
+    ･ バイト数を DriveStatus に反映
+    ･ CancellationToken により安全に停止可能
+
+  5.2.3 DriveStatus の生成
+    DriveStatus は以下の情報を持つ  :
+    ┌────────┬─────────┐
+    │ プロパティ     │ 説明             │
+    ┝━━━━━━━━┿━━━━━━━━━┥
+    │ DriveLetter    │ ドライブ文字     │
+    ├────────┼─────────┤
+    │ IsReadActive   │ 読み取り中か     │
+    ├────────┼─────────┤
+    │ IsWriteActive  │ 書き込み中か     │
+    ├────────┼─────────┤
+    │ ReadBytes      │ 読み取りバイト数 │
+    ├────────┼─────────┤
+    │ WriteBytes     │ 書き込みバイト数 │
+    └────────┴─────────┘
+
+5.3 アイコン描画 → IconRenderer
+  DriveStatus[] を受け取った TrayIconManager は、IconRenderer にアイコン描画を依頼します。
+
+  IconRenderer.RenderIcons(DriveStatus[])
+      ├─ DPI 判定 (16px / 32px)
+      ├─ PNG 読み込み
+      ├─ DriveLetter の描画 (FontHelper)
+      ├─ I/O 状態に応じた色の合成
+      └─ Icon[] を生成
+
+  5.3.1 DPI 判定
+    SettingsManager.Current.Dpi または Graphics.DpiX を参照し :
+      ･ 144 DPI 未満 → 16px
+      ･ 144 DPI 以上 → 32px
+    を自動選択。
+
+  5.3.2 PNG の読み込み
+    ･ 読み取りアイコン        : (write_off_read_on_.png)
+    ･ 書き込みアイコン        : (write_on__read_off.png)
+    ･ アイドルアイコン        : (write_off_read_off.png)
+    ･ 両方アクティブアイコン  : (write_on__read_on_.png)
+    を合成して 1つのアイコンにまとめる。
+
+  5.3.3 DriveLetter の描画
+    FontHelper が DPI に応じたフォントを返すため、高 DPI でも文字が潰れない。
+
+5.4 通知領域アイコン更新 → TrayIconManager
+  IconRenderer が生成した Icon[] を受け取り、TrayIconManager が通知領域に反映します。
+
+  TrayIconManager.UpdateIcons(Icon[])
+    ├─ NotifyIcon.Icon にセット
+    ├─ 古いアイコンを DestroyIcon で破棄
+    ├─ コンテキストメニューの更新
+    └─ 次のループまで待機
+
+  5.4.1 アイコン破棄
+    Win32 API DestroyIcon を使用し、GDI リソースリークを防止。
+
+  5.4.2 コンテキストメニュー
+    ･ 設定 (Settings)
+    ･ 終了 (Quit)
+    などが LangManager により多言語化される。
+
+5.5 終了処理 → ETW 停止・ログ保存
+  アプリ終了時、TrayIconManager.Dispose() が呼ばれます。
+
+  TrayIconManager.Dispose()
+    ├─ DriveMonitor.StopEtwMonitor()
+    ├─ NotifyIcon.Dispose()
+    ├─ Icon の破棄
+    └─ FontHelper.ClearCache()
+
+  5.5.1 ETW の停止
+    ･ CancellationToken を発行
+    ･ TraceEventSession を安全に停止
+    ･ スレッドを確実に終了
+
+  5.5.2 アイコン破棄
+    ･ GDI リソースをすべて解放
+    ･ TEMP の PNG は残しても問題なし
+
+  5.5.3 フォントキャッシュの破棄
+    FontHelper.ClearCache() により Font.Dispose() が確実に呼ばれる。
+
+5.6 データフローの特徴 (まとめ)
+  Drive Indicator AI のデータフローは以下の特徴を持つ :
+    ･ 非同期処理が安全に管理されている
+        ETW は CancellationToken で停止
+        PerfCounter は例外処理で保護
+    ･ DPI と I/O 状態がリアルタイムに反映される
+        アイコン描画は毎ループで実行
+    ･ 責務分離が徹底されている
+        監視・描画・UI・設定が完全に独立
+    ･ ログが全体を支える
+        例外や内部動作をすべて記録
+
+
+6. DPI 対応の詳細 (High-DPI Support)
+  Drive Indicator AI は、Windows の DPI 設定に応じて 16px / 32px のアイコンを自動切り替えし、高解像度環境でも美しいアイコン表示を実現しています。
+  WinForms は DPI 対応が難しいことで有名ですが、Drive Indicator AI は 独自の DPI 設計により、安定した描画と UI 表示を実現しています。
+
+6.1 DPI 対応の目的
+  Windows では DPI によってタスクトレイのアイコンサイズが変化します :
+    ┌─────┬─────┬────────┐
+    │   DPI    │ スケール │ アイコンサイズ │
+    ┝━━━━━┿━━━━━┿━━━━━━━━┥
+    │  96 DPI  │  100 %   │ W16×H16ドット │
+    ├─────┼─────┼────────┤
+    │ 120 DPI  │  125 %   │ W16×H16ドット │
+    ├─────┼─────┼────────┤
+    │ 144 DPI  │  150 %   │ W32×H32ドット │
+    ├─────┼─────┼────────┤
+    │ 192 DPI  │  200 %   │ W32×H32ドット │
+    └─────┴─────┴────────┘
+  Drive Indicator AI はこの仕様に合わせて、DPI に応じた最適なアイコンサイズを自動選択します。
+
+6.2 DPI 判定の仕組み
+  DPI 判定は以下の 2つの情報を組み合わせて行われます :
+    1. SettingsManager.SizeChangeDpi (固定値 144 DPI)
+    2. Graphics.DpiX (実行時 DPI)
+
+  6.2.1 DPI 判定ロジック (簡略版)
+    ──────────────────────────────────
+      if (dpi >= SettingsManager.SizeChangeDpi)
+          IconSize = 32px
+      else
+          IconSize = 16px
+    ──────────────────────────────────
+    SizeChangeDpi は設定ファイルで管理されており、デフォルトでは 144 DPI (150%) に設定されています。
+
+6.3 IconRenderer による DPI 対応
+  IconRenderer は DPI に応じて以下を切り替えます :
+    • アイコンサイズ (16px / 32px)
+    • ドライブ文字のフォントサイズ
+    • PNG アイコンの読み込み先フォルダ (16 / 32)
+    • 描画位置 (DriveSize / LetterSize)
+
+  6.3.1 アイコンサイズの決定
+    ──────────────────────────────────
+      int iconSize = (dpi >= SizeChangeDpi) ? 32  : 16;
+    ──────────────────────────────────
+
+  6.3.2 PNG の読み込み先
+    ──────────────────────────────────
+      Icons/Default/16/xxx.png
+      Icons/Default/32/xxx.png
+    ──────────────────────────────────
+
+  6.3.3 描画位置の調整
+    DriveSize / LetterSize は DPI に応じて自動計算されるため、文字が潰れたり、位置がずれたりしない。
+
+6.4 FontHelper による DPI フォント管理
+  DPI 対応で最も難しいのが フォントサイズの管理です。
+  Drive Indicator AI では、GraphicsUnit.Pixel を使用することで DPI の影響を受けないフォントを生成しています。
+
+  6.4.1 フォント生成のポイント
+    ──────────────────────────────────
+    new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+    ──────────────────────────────────
+    • Pixel 指定 → DPI による自動拡大縮小が発生しない
+    • 文字が潰れない
+    • アイコン内の DriveLetter が常に美しい
+
+  6.4.2 フォントキャッシュ
+    FontHelper は DPI ごとにフォントをキャッシュし、毎回生成しないことでパフォーマンスを向上。
+
+6.5 SettingsForm の DPI サンプル表示
+  SettingsForm の PictureBox では、実際のタスクトレイと同じロジックでサンプルアイコンを描画します。
+    • IconRenderer と同じ描画処理
+    • FontHelper の DPI フォント
+    • PNG 合成
+    • DriveLetter の描画
+  これにより、ユーザーは 設定変更前に見た目を確認できる。
+
+6.6 DPI 対応の設計思想 (まとめ)
+  Drive Indicator AI の DPI 対応は、以下の特徴を持っています :
+    1. WinForms の DPI 問題を回避
+      • 自動スケーリングを使わず、すべて手動で制御
+      • GraphicsUnit.Pixel による DPI 非依存フォント
+
+    2. アイコン描画が DPI 完全対応
+      • 16px / 32px の PNG を用意
+      • DPI に応じて自動切り替え
+      • DriveLetter の位置・サイズも DPI で調整
+
+    3. UI も DPI に強い
+      • SettingsForm のサンプル描画
+      • PictureBox の DPI 対応
+      • アイコンの見た目が常に安定
+
+    4. 拡張性が高い
+      • 新しい DPI (48px など) にも簡単に対応可能
+      • アイコンテーマの追加も容易
+
+
+7. ETW (Event Tracing for Windows) 詳細
+  Drive Indicator AI の最大の特徴のひとつが、RAMドライブ の I/O を ETW (Event Tracing for Windows) で高精度に監視できることです。
+
+  通常の PerformanceCounter では RAMドライブ の I/O を取得できません。
+  そのため、Drive Indicator AI は ETW の FileIORead / FileIOWrite イベントを直接解析し、RAMドライブ の読み書きを正確に検出しています。
+  この章では、その仕組みを開発者向けに詳しく説明します。
+
+7.1 なぜ ETW が必要なのか
+  7.1.1 PerformanceCounter の限界
+    Windows の PerformanceCounter (LogicalDisk) は :
+      • RAMドライブ を ｢ディスク｣ と認識しない
+      • 読み取り/書き込みバイト数が常に 0
+      • 一部の RAM ディスクソフトではインスタンスが存在しない
+    そのため、通常の方法では RAMドライブ の I/O を監視できない。
+
+  7.1.2 ETW の利点
+    ETW は Windows カーネルが発行するイベントを直接取得できるため :
+      • RAMドライブ でも確実に I/O を検出
+      • バイト数を正確に取得
+      • 高速・低負荷
+      • 管理者権限不要 (FileIO 系イベントはユーザーモードで取得可能)
+    Drive Indicator AI が RAMドライブ を正確に監視できる理由はここにあります。
+
+7.2 ETW で監視するイベント
+  Drive Indicator AI が監視している ETW イベントは以下の 2種類です :
+    ┌───────┬─────────────┐
+    │ イベント名   │ 説明                     │
+    ┝━━━━━━━┿━━━━━━━━━━━━━┥
+    │ FileIORead   │ ファイル読み取りイベント │
+    ├───────┼─────────────┤
+    │ FileIOWrite  │ ファイル書き込みイベント │
+    └───────┴─────────────┘
+  これらは KernelTraceControl プロバイダから発行されます。
+
+7.3 EtwRamIoMonitor の構造
+  EtwRamIoMonitor は、RAMドライブ 専用の監視クラスです。
+
+    EtwRamIoMonitor
+      ├─ Start()
+      ├─ Stop()
+      ├─ ProcessEvent()
+      ├─ CancellationToken
+      └─ DriveLetter → ReadBytes / WriteBytes
+
+  7.3.1 Start()
+    • TraceEventSession を作成
+    • FileIORead / FileIOWrite を購読
+    • 別スレッドでイベント処理を開始
+
+  7.3.2 Stop()
+    • CancellationToken を発行
+    • セッションを安全に停止
+    • スレッドを確実に終了
+
+  7.3.3 ProcessEvent()
+    • イベントから DriveLetter を抽出
+    • バイト数を DriveMonitor に渡す
+    • 読み取り/書き込みフラグを更新
+
+7.4 DriveLetter の抽出方法
+  ETW の FileIO イベントには、ファイルパス (例 : C:\path\file.txt) が含まれています。
+  Drive Indicator AI はこのパスから :
+    ──────────────────────────────────
+      最初の 1文字 (例 : C)
+    ──────────────────────────────────
+  を DriveLetter として抽出します。
+  RAMドライブ の場合も同様に :
+    ──────────────────────────────────
+      R:\temp\file.bin → R
+    ──────────────────────────────────
+  と取得できます。
+
+7.5 スレッドとキャンセル処理
+  ETW はイベントをリアルタイムで受け取るため、専用スレッドで処理する必要があります。
+  Drive Indicator AI では :
+    • Task.Run() で ETW スレッドを開始
+    • CancellationTokenSource で停止
+    • Stop() 呼び出し時に安全に終了
+  という構造になっています。
+
+  7.5.1 安全な停止が重要な理由
+    ETW セッションは停止しないと :
+      • セッションが残留する
+      • 次回起動時に ｢セッション名が重複｣ エラー
+      • メモリリークの原因になる
+    Drive Indicator AI は Stop() で確実にセッションを閉じるため、この問題を完全に回避しています。
+
+7.6 DriveMonitor との連携
+  EtwRamIoMonitor は DriveMonitor に対して :
+    • DriveLetter
+    • ReadBytes
+    • WriteBytes
+  をリアルタイムに渡します。
+  DriveMonitor はこれを PerformanceCounter の結果と統合し、最終的な DriveStatus を生成します。
+    ──────────────────────────────────
+      PerfCounter → 通常ドライブ
+      ETW         → RAMドライブ
+    ──────────────────────────────────
+  という役割分担です。
+
+7.7 ETW のテスト方法
+  開発者が ETW の動作を確認するには :
+    1. RAMドライブ を作成 (ImDisk など)
+    2. Drive Indicator AI を起動
+    3. RAMドライブ にファイルをコピー
+    4. アイコンが 赤 / 緑 に変化するか確認
+    5. ログに ETW イベントが記録されているか確認
+  これで ETW が正しく動作していることを確認できます。
+
+7.8 ETW 実装の特徴 (まとめ)
+  Drive Indicator AI の ETW 実装は以下の特徴を持っています :
+    1. RAMドライブ の I/O を正確に取得
+      一般的なツールでは取得できない情報を取得可能。
+    2. 低負荷・高速
+      ETW は Windows 標準の高速トレース機構。
+    3. 管理者権限不要
+      FileIO 系イベントはユーザーモードで取得できる。
+    4. セッション管理が安全
+      Stop() で確実にセッションを終了し、残留を防止。
+    5. DriveMonitor と統合
+      PerfCounter と ETW を統合し、全ドライブを一元管理。
+
+
+8. 自動実行 (StartupHelper)
+  Drive Indicator AI は、Windows 起動時に自動でアプリを実行するために、タスクスケジューラ (Task Scheduler) を利用しています。
+  一般的なアプリが使う ｢レジストリ Run キー｣ ではなく、あえてタスクスケジューラを採用した理由は以下の通りです :
+    • 権限不要 (管理者権限なしで登録可能)
+    • UAC の影響を受けない
+    • Windows Update やセキュリティソフトに削除されにくい
+    • 起動の安定性が高い
+    • 実行条件を細かく制御できる
+  Drive Indicator AI の自動実行は、実用性と堅牢性を最優先した設計になっています。
+
+8.1 StartupHelper の役割
+  StartupHelper は、自動実行の ON/OFF を管理するコンポーネントです。
+
+    StartupHelper
+      ├─ RegisterStartupTask()
+      ├─ UnregisterStartupTask()
+      ├─ IsStartupRegistered()
+      └─ CreateTaskXml()
+
+  主な役割は以下の通り :
+    • タスクスケジューラに登録する XML を生成
+    • schtasks.exe を使ってタスクを登録/削除
+    • 現在の登録状態を確認
+    • SettingsForm と連携して UI から操作可能にする
+
+8.2 タスクスケジューラ方式の仕組み
+  Drive Indicator AI は、以下のコマンドを内部で実行します :
+
+    ● 登録 (RegisterStartupTask)
+    ──────────────────────────────────
+      schtasks /Create /TN "DriveIndicatorAI" /XML "task.xml" /F
+    ──────────────────────────────────
+
+    ● 削除 (UnregisterStartupTask)
+    ──────────────────────────────────
+      schtasks /Delete /TN "DriveIndicatorAI" /F
+    ──────────────────────────────────
+
+    ● 登録確認 (IsStartupRegistered)
+    ──────────────────────────────────
+      schtasks /Query /TN "DriveIndicatorAI"
+    ──────────────────────────────────
+
+  これらはすべて 管理者権限不要 で実行できます。
+
+8.3 タスク XML の構造
+  StartupHelper は、タスクスケジューラに登録するための XML を動的に生成します。
+  XML の主な内容 :
+    • LogonTrigger
+      → ユーザーがログオンしたときに実行
+    • Exec Action
+      → DriveIndicatorAI.exe を実行
+    • RunLevel
+      → “LeastPrivilege” を指定 (管理者権限不要)
+    • WorkingDirectory
+      → アプリのフォルダを指定
+
+  ● XML の例 (概略)
+    ──────────────────────────────────
+    <Task>
+      <Triggers>
+        <LogonTrigger>
+          <Enabled>true</Enabled>
+          <Delay>PT10S</Delay>
+        </LogonTrigger>
+      </Triggers>
+
+      <Principals>
+        <Principal id=""Author"">
+          <RunLevel>HighestAvailable</RunLevel>
+        </Principal>
+      </Principals>
+
+      <Settings>
+        <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+
+        <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+        <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+        <RunOnlyIfIdle>false</RunOnlyIfIdle>
+        <WakeToRun>false</WakeToRun>
+
+        <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+        <Priority>7</Priority>
+      </Settings>
+
+      <Actions Context=""Author"">
+        <Exec>
+          <Command>""ApplicationPath\DriveIndicatorAI.exe""</Command>
+        </Exec>
+      </Actions>
+    </Task>
+    ──────────────────────────────────
+
+    Drive Indicator AI はこの XML を TEMP に書き出し、
+    schtasks.exe に渡して登録します。
+
+8.4 自動実行の ON/OFF の流れ
+  SettingsForm の ｢Auto Start｣ チェックボックスを操作すると :
+    ──────────────────────────────────
+      ON  → StartupHelper.RegisterStartupTask()
+      OFF → StartupHelper.UnregisterStartupTask()
+    ──────────────────────────────────
+    ● ON の場合
+      1. XML を生成
+      2. TEMP に保存
+      3. schtasks.exe /Create を実行
+      4. 成功したら設定ファイルに保存
+    ● OFF の場合
+      1. schtasks.exe /Delete を実行
+      2. 設定ファイルに保存
+
+8.5 設計上の工夫
+  Drive Indicator AI の自動起動は、以下の点で非常に堅牢です。
+    1. 管理者権限不要
+        RunLevel=LeastPrivilege のため、一般ユーザー権限で登録可能。
+    2. Windows Update で消されにくい
+        レジストリ Run キーは OS 更新で消えることがあるが、タスクスケジューラは影響を受けにくい。
+    3. 実行フォルダを正しく設定
+        WorkingDirectory を指定することで、相対パスのリソース読み込みが安定。
+    4. XML を動的生成
+        アプリのパスが変わっても対応可能。
+    5. エラー時はログに記録
+        schtasks のエラー出力を LogHelper に記録するため、問題発生時の調査が容易。
+
+8.6 動作確認方法 (開発者向け)
+  1. SettingsForm → Auto Start を ON
+  2. Windows の ｢タスクスケジューラ｣ を開く
+  3.  ｢タスクスケジューラライブラリ｣ に DriveIndicatorAI_AutoStart が登録されていることを確認
+  4. Windows を再起動
+  5. タスクトレイに DriveIndicatorAI が表示されることを確認
+
+8.7 自動実行設計のまとめ
+  Drive Indicator AI の自動実行は :
+    • 安全
+    • 権限不要
+    • 安定
+    • 拡張性が高い
+  という、非常に優れた設計になっています。
+  一般的なユーティリティよりも一段上の品質で、企業向けアプリでも通用するレベルです。
+
+
+9. ログ設計 (Logging System)
+  Drive Indicator AI のログ機能は、アプリ内部の動作や例外を記録し、ユーザー環境で発生した問題を迅速に特定するために設計されています。
+  ログは TEMP フォルダ配下に専用ディレクトリを作成し、1MB ローテーション方式で管理されます。
+  この仕組みにより、ログが肥大化せず、長期間の運用でも安定して動作します。
+
+9.1 LogHelper の役割
+  LogHelper は Drive Indicator AI 全体のログ管理を担当するコンポーネントです。
+
+    LogHelper
+      ├─ LogWrite()
+      ├─ ClearLog()
+      ├─ CreateLogFolder()
+      ├─ RotateLog()
+      └─ IsEnabled (設定による ON/OFF)
+
+  主な役割 :
+    • ログファイルの生成
+    • ログ書き込み (スレッドセーフ)
+    • ローテーション (1MB 超で自動切り替え)
+    • ログフォルダの管理
+    • 設定によるログ ON/OFF
+
+9.2 ログファイルの保存場所
+  ログは TEMP フォルダ配下に保存されます。
+
+    %TEMP%\DriveIndicatorAI\Logs\
+      ├─ MessagesLog.log
+      └─ MessagesLog.old
+
+  この構造のメリット
+    • 権限不要
+    • ポータブルアプリでも問題なし
+    • ユーザーが簡単にアクセスできる
+    • アンインストール時に残っても安全
+
+9.3 ログ書き込み (LogWrite)
+  LogWrite は、ログを 1行単位で書き込むメソッドです。
+
+  9.3.1 特徴
+    • スレッドセーフ (lock による排他制御)
+    • タイムスタンプ付き
+    • 例外発生時も安全に動作
+    • ログ無効化時は即 return
+    
+  9.3.2 ログ形式 (例)
+    ──────────────────────────────────
+      [2025-12-12 14:33:21] DriveMonitor : Read=10240 Write=0 Drive=C
+      [2025-12-12 14:33:22] ETW : R drive write 4096 bytes
+      [2025-12-12 14:33:23] IconRenderer : DPI=144 IconSize=32px
+    ──────────────────────────────────
+
+9.4 ローテーション (RotateLog)
+  ログファイルが 1MB を超えた場合、以下の処理が自動で行われます :
+    MessagesLog.old ← MessagesLog.log をリネーム
+    MessagesLog.log ← 新規作成
+
+  9.4.1 ローテーションのメリット
+    • ログが肥大化しない
+    • 長期間運用でも安定
+    • 古いログも 1世代だけ保持
+
+9.5 ログの利用シーン
+  Drive Indicator AI のログは、以下のような場面で役立ちます :
+    1. ETW が動作しない場合の原因調査
+      • セッション開始エラー
+      • イベント受信エラー
+    2. PerformanceCounter の例外
+      • インスタンスが存在しない
+      • アクセス権の問題
+    3. アイコン描画の問題
+      • PNG 読み込みエラー
+      • DPI 判定の不具合
+    4. 自動起動の問題
+      • schtasks.exe のエラー出力
+    5. 設定ファイルの読み込みエラー
+      • JSON パースエラー
+      • ファイル破損
+
+9.6 設計上の工夫
+  Drive Indicator AI のログ設計には、以下の工夫があります :
+    1. ログ無効化が可能
+      SettingsManager でログを OFF にできるため、ユーザー環境で不要なログを抑制できる。
+    2. スレッドセーフ
+      ETW スレッド・監視スレッド・UI スレッドなど、複数スレッドから同時に書き込んでも安全。
+    3. ローテーションで肥大化防止
+      1MB超 で自動切り替え。
+      長期運用でも安定。
+    4. TEMP フォルダを使用
+      権限不要で、どの環境でも確実に書き込める。
+    5. 例外時もログを残す
+      try/catch 内で LogWrite を呼ぶため、問題発生時の原因が追跡しやすい。
+
+9.7 ログフォルダの操作 (ユーザー向け)
+  SettingsForm には ｢logフォルダを開く｣ ボタンがあり、ユーザーは簡単にログを確認できます。
+    • 問題報告時にログを添付してもらえる
+    • 開発者が原因を特定しやすい
+
+9.8 ログ設計のまとめ
+  Drive Indicator AI のログシステムは :
+    • 軽量
+    • 堅牢
+    • スレッドセーフ
+    • ローテーション付き
+    • デバッグ性が高い
+  という、実用性と品質を両立した設計になっています。
+  アプリの安定性を支える ｢縁の下の力持ち｣ と言えるコンポーネントです。
+
+
+10. 多言語対応 (i18n : Internationalization)
+Drive Indicator AI は、UI テキストをすべて JSON ファイルで管理する国際化システムを採用しています。
+これにより、アプリの再コンパイルなしで新しい言語を追加でき、
+ユーザーが即座に UI 言語を切り替えられる柔軟な設計になっています。
+
+10.1 多言語対応の全体構造
+  多言語対応は以下の 3 つの要素で構成されています :
+    1. 言語ファイル (JSON)
+    2. LangManager (翻訳管理クラス)
+    3. UI での適用 (SettingsForm / TrayIconManager など)
+    ──────────────────────────────────
+      lang_xx.json → LangManager → UI に適用
+    ──────────────────────────────────
+
+10.2 言語ファイル (JSON) の構造
+  言語ファイルは以下のフォルダに配置されます :
+    Resources/
+      └─ Language/
+            ├─ lang_ar.json
+            ├─ lang_cs.json
+            ├─ lang_da.json
+            ├─ lang_de.json
+            ├─ lang_el.json
+            ├─ lang_en.json
+            ├─ lang_es.json
+            ├─ lang_fi.json
+            ├─ lang_fr.json
+            ├─ lang_he.json
+            ├─ lang_hi.json
+            ├─ lang_hu.json
+            ├─ lang_id.json
+            ├─ lang_it.json
+            ├─ lang_ja.json
+            ├─ lang_ko.json
+            ├─ lang_ms.json
+            ├─ lang_nb.json
+            ├─ lang_nl.json
+            ├─ lang_pl.json
+            ├─ lang_pt.json
+            ├─ lang_ro.json
+            ├─ lang_ru.json
+            ├─ lang_sv.json
+            ├─ lang_th.json
+            ├─ lang_tr.json
+            ├─ lang_uk.json
+            ├─ lang_vi.json
+            ├─ lang_zh-CN.json
+            ├─ lang_zh-TW.json
+            └─ languages.json
+
+  10.2.1 lang_xx.json の構造 (例:lang_ja.json)
+  ───────────────────────────────────
+  {
+      "SettingsFormText": "Drive Indicator AI",
+      "AlreadyRunningMessage": "Drive Indicator AI はすでに実行中です。",
+      "MenuSetting": "設定",
+      "MenuQuit": "終了",
+      "labelSettingsText": "設定",
+      "chkStartupText": "Windows起動時に自動実行",
+      "gbDisplayDriveSelectionText": "表示ドライブ選択",
+      "BtnColorText": "色選択",
+      "gbDriveLettersColorText": "ドライブ文字色",
+      "gbDisplayIntervalText": "表示間隔 [msec]",
+      "BtnBrowseText": "フォルダー選択",
+      "gbIconImageFolderText": "アイコン画像フォルダー",
+      "chkEnableLogText": "logを記録する",
+      "BtnOpenLogFolderText": "logフォルダーを開く",
+      "BtnLogClearText": "logクリア",
+      "gbLogText": "Log",
+      "gbIconSampleText": "アイコンサンプル",
+      "BtnVersionInfoText": "バージョン情報",
+      "BtnCancelText": "キャンセル",
+      "BtnSaveText": "保存",
+      "BrowsWindowMessage": "アイコン画像フォルダーを選択してください",
+      "LogFolderOpenErrorMessage": "logフォルダーを開けませんでした。",
+      "LogFolderOpenErrorTitle": "エラー",
+      "LogClearQuestionMessage": "ログをクリアしてもよろしいですか？",
+      "LogClearQuestionTitle": "確認",
+      "LogClearErrorMessage": "logをクリアできませんでした。",
+      "LogClearErrorTitle": "エラー"
+  }
+  ───────────────────────────────────
+
+  10.2.2 特徴
+    • キーは英語で統一
+    • 値が翻訳文字列
+    • 新しい言語を追加する場合はファイルをコピーして翻訳するだけ
+
+10.3 languages.json (言語一覧)
+  言語選択コンボボックスに表示するための一覧ファイルです。
+  ───────────────────────────────────
+    [
+      { "Name": "عربي", "Code": "ar", "English_Name": "Arabic", "Japanese_Name": "アラビア語" },
+      { "Name": "čeština", "Code": "cs", "English_Name": "Czech", "Japanese_Name": "チェコ語" },
+      { "Name": "Dansk", "Code": "da", "English_Name": "Danish", "Japanese_Name": "デンマーク語" },
+      { "Name": "Deutsch", "Code": "de", "English_Name": "German", "Japanese_Name": "ドイツ語" },
+      { "Name": "ελληνικά", "Code": "el", "English_Name": "Greek", "Japanese_Name": "ギリシャ語" },
+      { "Name": "English", "Code": "en", "English_Name": "English", "Japanese_Name": "英語" },
+      { "Name": "Español", "Code": "es", "English_Name": "Spanish", "Japanese_Name": "スペイン語" },
+      { "Name": "suomi", "Code": "fi", "English_Name": "Finnish", "Japanese_Name": "フィンランド語" },
+      { "Name": "Français", "Code": "fr", "English_Name": "French", "Japanese_Name": "フランス語" },
+      { "Name": "עִברִית", "Code": "he", "English_Name": "Hebrew", "Japanese_Name": "ヘブライ語" },
+      { "Name": "हिंदी", "Code": "hi", "English_Name": "Hindi", "Japanese_Name": "ヒンディー語" },
+      { "Name": "magyar", "Code": "hu", "English_Name": "Hungarian", "Japanese_Name": "ハンガリー語" },
+      { "Name": "Indonesia", "Code": "id", "English_Name": "Indonesian", "Japanese_Name": "インドネシア語" },
+      { "Name": "Italiano", "Code": "it", "English_Name": "Italian", "Japanese_Name": "イタリア語" },
+      { "Name": "日本語", "Code": "ja", "English_Name": "Japanese", "Japanese_Name": "日本語" },
+      { "Name": "韓国語", "Code": "ko", "English_Name": "Korean", "Japanese_Name": "韓国語" },
+      { "Name": "ملايو", "Code": "ms", "English_Name": "Malay", "Japanese_Name": "マレー語" },
+      { "Name": "norsk", "Code": "nb", "English_Name": "Norwegian", "Japanese_Name": "ノルウェー語" },
+      { "Name": "Nederlands", "Code": "nl", "English_Name": "Dutch", "Japanese_Name": "オランダ語" },
+      { "Name": "ߔߏߟߐ߲", "Code": "pl", "English_Name": "Polish", "Japanese_Name": "ポーランド語" },
+      { "Name": "Português", "Code": "pt", "English_Name": "Portuguese", "Japanese_Name": "ポルトガル語" },
+      { "Name": "Română", "Code": "ro", "English_Name": "Romanian", "Japanese_Name": "ルーマニア語" },
+      { "Name": "Русский", "Code": "ru", "English_Name": "Russian", "Japanese_Name": "ロシア語" },
+      { "Name": "Svenska", "Code": "sv", "English_Name": "Swedish", "Japanese_Name": "スウェーデン語" },
+      { "Name": "แบบไทย", "Code": "th", "English_Name": "Thai", "Japanese_Name": "タイ語" },
+      { "Name": "Türkçe", "Code": "tr", "English_Name": "Turkish", "Japanese_Name": "トルコ語" },
+      { "Name": "українська", "Code": "uk", "English_Name": "Ukrainian", "Japanese_Name": "ウクライナ語" },
+      { "Name": "Tiếng Việt", "Code": "vi", "English_Name": "Vietnamese", "Japanese_Name": "ベトナム語" },
+      { "Name": "中国語 (簡体字) ", "Code": "zh-CN", "English_Name": "Chinese (Simplified)", "Japanese_Name": "中国語 (簡体字) " },
+      { "Name": "中国語 (繁体字) ", "Code": "zh-TW", "English_Name": "Chinese (Traditional)", "Japanese_Name": "中国語 (繁体字) " }
+    ]
+  ───────────────────────────────────
+  LangManager はこのファイルを読み込み :
+    • 言語コード   → 言語名
+    • 言語コード   → 言語名(英語)
+    • 言語名       → 言語コード
+    • 言語名(英語) → 言語コード
+    ･ 言語名       → 言語名(英語)
+  の相互変換を行います。
+
+10.4 LangManager の役割
+  LangManager は多言語対応の中心となるクラスです。
+
+    LangManager
+      ├─ Load(languageCode)
+      ├─ T(key)
+      ├─ LoadLanguagesJson()
+      ├─ GetNameToCode(languageName)
+      ├─ GetEnameToCode(languageEname)
+      ├─ GetName(languageCode)
+      ├─ GetEname(languageCode)
+      └─ GetNameToEname(languageName)
+
+  10.4.1 Load(languageCode)
+    • lang_xx.json を読み込み
+    • Dictionary<string, string> に格納
+    • 翻訳テーブルを構築
+    
+  10.4.2 T(key)
+    翻訳文字列を取得するメソッド。
+    ──────────────────────────────────
+      string text = Lang.T("Settings");
+    ──────────────────────────────────
+    キーが存在しない場合は キー名をそのまま返すため、翻訳漏れがあっても UI が壊れない。
+
+10.5 UI での適用
+  UI コンポーネントは、LangManager を使ってテキストを更新します。
+
+  10.5.1 SettingsForm の例
+    ──────────────────────────────────
+      labelSettings.Text = Lang.T("labelSettingsText");
+      BtnSave.Text = Lang.T("BtnSaveText");
+    ──────────────────────────────────
+
+  10.5.2 TrayIconManager の例
+    ──────────────────────────────────
+      menu.Items.Settings.Text = Lang.T("MenuSettings");
+      menu.Items.Quit.Text = Lang.T("MenuQuit");
+    ──────────────────────────────────
+
+  10.5.3 言語切り替え時の動作
+    1. SettingsForm で言語を選択
+    2. SettingsManager に保存
+    3. 次回起動時に LangManager.Load() が呼ばれる
+    4. UI が新しい言語で表示される
+
+10.6 新しい言語の追加方法 (開発者向け)
+  Drive Indicator AI の国際化は非常に簡単に拡張できます。
+
+    手順 1 : 言語ファイルをコピー
+      "lang_en.json" をコピーして "lang_xx.json" を作成。
+
+    手順 2 : 翻訳を記述
+      "lang_xx.json" の値をＸＸＸＸ語に変更。
+
+    手順 3 : languages.json に追加
+      ─────────────────────────────────
+      [
+        { "Name": "عربي", "Code": "ar", "English_Name": "Arabic", "Japanese_Name": "アラビア語" },
+        {    ･
+        {    ･
+        {    ･
+        { "Name": "中国語 (繁体字) ", "Code": "zh-TW", "English_Name": "Chinese (Traditional)", "Japanese_Name": "中国語 (繁体字) " }
+        { "Name": "ＸＸＸＸ", "Code": "xx", "English_Name": "xxxx", "Japanese_Name": "ＸＸＸＸ語" }
+      ]
+      ─────────────────────────────────
+
+    手順 4 : SettingsForm の言語選択に自動反映
+      LangManager が自動で読み込むため、コード変更は不要。
+
+10.7 設計上の工夫
+  Drive Indicator AI の多言語対応は、以下の点で優れています :
+    1. JSON ベースで拡張性が高い
+      新しい言語を追加するのにコード変更が不要。
+    2. 翻訳漏れに強い
+      キーが見つからない場合はキー名を返すため、UI が壊れない。
+    3. 言語一覧も JSON 管理
+      UI とロジックが完全に分離されている。
+    4. 設定ファイルで言語を保持
+      ユーザーが選んだ言語が次回起動時に反映される。
+    5. UI の再描画が簡単
+      SettingsForm.ApplyLanguage() で UI を一括更新。
+
+10.8 多言語対応のまとめ
+  Drive Indicator AI の i18n システムは :
+    • 軽量
+    • 拡張性が高い
+    • 壊れにくい
+    • 開発者に優しい
+  という、非常に優れた設計になっています。
+  国際化対応が必要なアプリの模範例と言える構造です。
+
+11. 拡張方法 (Extensibility Guide) 
+  Drive Indicator AI は、UI・監視ロジック・描画ロジック・国際化などが明確に分離されているため、後から機能を追加したり、カスタマイズしたりするのが容易です。
+  この章では、開発者が Drive Indicator AI を拡張する際に必要なポイントをまとめます。
+
+11.1 新しい言語の追加 (i18n 拡張) 
+  Drive Indicator AI の多言語対応は JSON ベースで、非常に簡単に拡張できます。
+
+    手順 1 : 言語ファイルをコピー
+      Resources/Language/lang_en.json をコピーして lang_xx.json のように名前を変更。
+
+    手順 2 : 翻訳を記述
+      lang_xx.json の値を翻訳するだけ。
+
+    手順 3 : languages.json に追加
+      ─────────────────────────────────
+      [
+        { "Name": "عربي", "Code": "ar", "English_Name": "Arabic", "Japanese_Name": "アラビア語" },
+        {    ･
+        {    ･
+        {    ･
+        { "Name": "中国語 (繁体字) ", "Code": "zh-TW", "English_Name": "Chinese (Traditional)", "Japanese_Name": "中国語 (繁体字) " }
+        { "Name": "ＸＸＸＸ", "Code": "xx", "English_Name": "xxxx", "Japanese_Name": "ＸＸＸＸ語" }
+      ]
+      ─────────────────────────────────
+
+    手順 4 : SettingsForm に自動反映
+      LangManager が自動で読み込むため、コード変更は不要。
+
+11.2 新しいアイコンテーマの追加
+  Drive Indicator AI のアイコンは PNG ベースで、以下のフォルダ構造になっています : 
+
+    Resources/
+      └─ Icons/
+            └─ Default/
+                  ├─ 16/
+                  └─ 32/
+
+  11.2.1 新テーマを追加する方法
+    1. 新しいテーマフォルダーを作成
+
+      Resources/
+        └─ Icons/
+              ├─ Default/
+              └─ MyTheme/
+
+    2. 新しいテーマフォルダー内に 16/ と 32/ フォルダーを作成
+
+      MyTheme/
+        ├─ 16/  ← W16×H16ドット用フォルダー
+        └─ 32/  ← W32×H32ドット用フォルダー
+
+    3. 16/ と 32/ に新しい PNG を配置
+        ファイル名は既存と同じにする (例 : write_off_read_off.png, write_off_read_on_.png) 
+
+      MyTheme/
+        ├─ 16/
+        │   ├─ write_off_Read_off.png  ← W8×H16ドット Write OFF, Read OFF
+        │   ├─ write_off_Read_on_.png  ← W8×H16ドット Write OFF, Read ON
+        │   ├─ write_on__Read_off.png  ← W8×H16ドット Write ON , Read OFF
+        │   └─ write_on__Read_on_.png  ← W8×H16ドット Write ON , Read ON
+        └─ 32/
+             ├─ write_off_Read_off.png  ← W16×H32ドット Write OFF, Read OFF
+             ├─ write_off_Read_on_.png  ← W16×H32ドット Write OFF, Read ON
+             ├─ write_on__Read_off.png  ← W16×H32ドット Write ON , Read OFF
+             └─ write_on__Read_on_.png  ← W16×H32ドット Write ON , Read ON
+
+    4. SettingsManager のアイコン画像フォルダ設定で新しいテーマフォルダーパスを指定
+
+        "アプリケーションフォルダー/Resources/Icons/MyTheme/"
+
+  11.2.2 メリット
+    ･ 再コンパイル不要
+    ･ ユーザーが自由にテーマを作れる
+    ･ DPI に応じて自動切り替えされる
+
+11.3 新しい監視方式の追加 (高度な拡張)
+  Drive Indicator AI の監視ロジックは以下の構造になっています :
+
+    DriveMonitor
+      ├─ PerfCounter (通常ドライブ) 
+      └─ EtwRamIoMonitor (RAMドライブ) 
+
+  11.3.1 新しい監視方式を追加する場合
+    例 : NVMe 専用 API、WMI、SMART 情報など
+      1. 新しい監視クラスを作成
+        ･ 例 : NvmeIoMonitor
+      2. DriveMonitor に統合
+        ･ Update() 内で新しい監視結果を DriveStatus に反映
+      3. DriveStatus に必要なプロパティを追加
+
+  11.3.2 設計上のメリット
+    ･ DriveMonitor が ｢統合ポイント｣ になっているため追加が容易
+    ･ UI や描画ロジックは変更不要
+    ･ ログで動作確認がしやすい
+
+11.4 設定項目の追加
+  SettingsManager は JSON ベースで柔軟に拡張できます。
+
+  11.4.1 手順
+    1. Settings クラスにプロパティを追加
+    2. SettingsManager.Load() / Save() に項目を追加
+    3. SettingsForm に UI を追加
+    4. TrayIconManager や DriveMonitor で参照
+    
+  11.4.2 設計上のメリット
+    ･ 設定ファイルが壊れてもデフォルト値で復元
+    ･ UI とロジックが分離されているため安全
+
+11.5 UI の拡張 (SettingsForm の項目追加)
+  SettingsForm は ApplyLanguage() によって UI テキストが一括管理されているため、項目を追加しても国際化が壊れにくい構造です。
+
+  11.5.1 拡張手順
+    1. コントロールを追加
+    2. Lang.T("Key") を使ってテキストを設定
+    3. SettingsManager と値を同期
+
+  11.5.2 注意点
+    ･ DPI サンプル描画を追加する場合は IconRenderer を利用
+    ･ Anchor / Dock を適切に設定して UI 崩れを防止
+
+11.6 アイコン描画ロジックの拡張
+ IconRenderer は以下のように責務が分離されています :
+    ･ PNG 読み込み
+    ･ DPI 判定
+    ･ DriveLetter 描画
+    ･ 色の合成
+
+  11.6.1 新しい描画要素を追加する場合
+    例 : I/O グラフ、アニメーション、使用率バーなど
+      1. RenderIcon() に描画処理を追加
+      2. DriveStatus に必要な情報を追加
+      3. SettingsManager に ON/OFF 設定を追加 (任意)
+      
+  11.6.2 設計上のメリット
+    ･ 描画ロジックが 1 箇所に集約されている
+    ･ DPI 対応は既存の仕組みを流用できる
+
+11.7 拡張性のまとめ
+  Drive Indicator AI は、以下の点で非常に拡張しやすい設計になっています :
+    1. JSON ベースの国際化
+      → 言語追加が簡単
+    2. PNG ベースのアイコンテーマ
+      → 見た目を自由に変更可能
+    3. DriveMonitor の統合構造
+      → 新しい監視方式を追加しやすい
+    4. SettingsManager の柔軟性
+      → 設定項目の追加が容易
+    5. IconRenderer の責務分離
+      → 描画ロジックの拡張が安全
+    6. UI とロジックの完全分離
+      → 変更が他の部分に影響しにくい
+  Drive Indicator AI は、個人ユーティリティでありながら、企業向けアプリ並みの拡張性を持つ設計になっています。
+
+
+12. 既知の制限事項 (Known Limitations)
+  Drive Indicator AI は Windows の I/O 監視機能 (PerformanceCounter / ETW) を活用して動作しますが、これらの仕組みには OS 側の制約や外部環境の影響があり、アプリ側で完全に制御できない部分があります。
+  この章では、Drive Indicator AI の既知の制限事項と、その理由・背景を説明します。
+
+12.1 ETW が利用できない環境が存在する
+  ETW (Event Tracing for Windows) は通常ユーザーモードで利用できますが、以下の環境では動作しない場合があります : 
+
+    ● 制限が発生するケース
+      • 企業環境で ETW がポリシーにより無効化されている
+      • セキュリティソフトが ETW をブロックしている
+      • Windows のトレースサービスが停止している
+      • 他アプリが同名セッションを占有している
+
+    ● 影響
+      • RAM ドライブの I/O が取得できない
+      • DriveMonitor が RAM ドライブを ｢常にアイドル｣ と判定する
+      • ログに ETW エラーが記録される
+
+    ● 回避策
+      • セッション名をユニークにして衝突を避ける (既に実装済み)
+      • ETW が使えない場合は RAM ドライブ監視をスキップ
+
+12.2 一部の RAMドライブ (RAMディスク) ソフトとの相性
+  RAMドライブ はソフトによって実装が異なるため、ETW の FileIO イベントが発生しない製品があります。
+
+    ● 影響
+      • 読み書きが行われても ETW にイベントが届かない
+      • Drive Indicator AI では ｢アイドル状態(読み/書き無し)｣ として表示される
+
+    ● 代表例
+      • 独自ドライバで I/O を処理する RAMドライブ
+      • Windows の FileIO イベントを発行しない製品
+
+12.3 PerformanceCounter の制限
+  PerformanceCounter (LogicalDisk) は Windows の仕様により、以下の制限があります。
+
+    ● 制限内容
+      • 一部の USB メモリが ｢ディスク｣ と認識されない
+      • ドライブ文字が割り当てられていないボリュームは監視不可
+      • インスタンス名が OS により変動することがある
+      • カウンタが初期化されるまで値が 0 になることがある
+
+    ● 影響
+      • 特定のドライブが監視対象に表示されない
+      • 起動直後に I/O が取得できない場合がある
+
+12.4 高 DPI 環境での WinForms の制約
+  Drive Indicator AI は DPI 対応を独自実装していますが、WinForms 自体の制約により以下の問題が発生する可能性があります。
+
+    ● 制限内容
+      • Windows の DPI 設定を変更した直後は再起動が必要
+      • 一部の環境で PictureBox の描画が遅延する
+      • マルチモニタ環境で DPI が混在すると描画が不安定になる場合がある
+
+    ● 影響
+      • サンプルアイコンの表示が一瞬乱れる
+      • DPI 切り替えが即時反映されない
+
+12.5 タスクスケジューラが無効化されている環境
+  Drive Indicator AI の自動実行はタスクスケジューラ方式ですが、企業環境ではタスクスケジューラが無効化されている場合があります。
+
+    ● 影響
+      • 自動実行が登録できない
+      • schtasks.exe がエラーを返す
+      • ログにエラーが記録される
+
+12.6 権限の制限による影響
+  Drive Indicator AI は管理者権限不要で動作しますが、権限が極端に制限された環境では以下の問題が発生します。
+
+    ● 制限内容
+      • TEMP フォルダへの書き込みが禁止されている
+      • PerformanceCounter へのアクセスが制限されている
+      • ETW がブロックされている
+
+    ● 影響
+      • ログが保存できない
+      • 監視が動作しない
+      • アプリが実行できない場合がある
+
+12.7 既知の制限事項まとめ
+  Drive Indicator AI の制限は主に Windows の仕様 と 外部環境 に起因します。
+    ┌──────────────┬─────────────┬─────────────┐
+    │ 項目                       │ 原因                     │ 影響                     │
+    ┝━━━━━━━━━━━━━━┿━━━━━━━━━━━━━┿━━━━━━━━━━━━━┥
+    │ ETW が使えない             │ ポリシー / セキュリティ  │ RAMドライブ監視不可      │
+    ├──────────────┼─────────────┼─────────────┤
+    │ RAMドライブの相性          │ 製品ごとの実装差         │ I/O が取得できない       │
+    ├──────────────┼─────────────┼─────────────┤
+    │ PerformanceCounter の制限  │ Windows の仕様           │ 一部ドライブが監視不可   │
+    ├──────────────┼─────────────┼─────────────┤
+    │ 高 DPI の制約              │ WinForms の仕様          │ 描画が不安定になる場合   │
+    ├──────────────┼─────────────┼─────────────┤
+    │ タスクスケジューラー無効   │ 企業環境の制限           │ 自動実行不可             │
+    ├──────────────┼─────────────┼─────────────┤
+    │ 権限制限                   │ セキュリティ設定         │ ログ / 監視が動作しない  │
+    └──────────────┴─────────────┴─────────────┘
+  Drive Indicator AI はこれらの制限を考慮しつつ、可能な範囲で最も安定した動作を実現するよう設計されています。
+
+
+13. ライセンス (License)
+  Drive Indicator AI は、個人利用および非商用利用を前提として無償で提供されるソフトウェアです。
+  ユーザーが安心して利用できるよう、アプリ内の LicenseDialog に記載されている内容をベースに、本章ではライセンスの概要と開発者向けの注意点をまとめます。
+
+13.1 ライセンスの基本方針
+  Drive Indicator AI は以下の方針で提供されます :
+    • 無償で利用可能
+    • 個人利用および非商用利用を許可
+    • 再配布は許可 (改変不可)
+    • 無保証 (No Warranty)
+    • 開発者は責任を負わない
+  これは一般的なフリーウェアのライセンス方針に近い内容です。
+
+13.2 利用許諾 (Permission)
+  ユーザーは以下の行為を行うことができます :
+    1. 利用
+      Drive Indicator AI を個人用途で自由に利用できます。
+    2. 再配布
+      Drive Indicator AI を第三者に配布できます。
+      ただし、改変したバイナリの配布は禁止されています。
+    3. スクリーンショットの利用
+      ブログ・SNS・レビュー記事などで自由に使用できます。
+
+13.3 禁止事項 (Restrictions)
+  以下の行為は禁止されています :
+    1. 商用利用
+      企業内での業務利用、製品への組み込み、販売目的での利用は不可。
+    2. 改変したバイナリの配布
+      DriveIndicatorAI.exe を改造して配布することは禁止。
+    3. リバースエンジニアリング
+      逆アセンブル・逆コンパイルなどの解析行為は禁止。
+    4. 著作権表示の削除
+      アプリ内の著作権表記を削除・改変することは禁止。
+
+13.4 免責事項 (Disclaimer)
+  Drive Indicator AI は 無保証 (AS IS) で提供されます。
+    • 本ソフトウェアを使用したことによる損害について、開発者は一切責任を負いません。
+    • データ損失、システム障害、業務停止などが発生しても補償はありません。
+    • 本ソフトウェアの動作は完全性を保証するものではありません。
+  これはフリーウェアとして一般的な免責事項です。
+
+13.5 ライセンス文の管理方法 (開発者向け)
+  Drive Indicator AI のライセンス文は :
+    • LicenseDialog 内にハードコード
+    • 言語コードに応じて日本語/英語を切り替え
+    • 外部ファイルに依存しない安全な構造
+
+  ● ハードコード方式を採用した理由
+    • ライセンス文はアプリの一部であり、外部ファイル破損の影響を受けない
+    • JSON に含めると翻訳漏れや破損のリスクがある
+    • セキュリティ上、外部ファイルに依存しない方が安全
+
+13.6 Github での LICENSE ファイルについて
+  Github で公開する場合は、LICENSE.txt をリポジトリ直下に配置することが推奨されます。
+  内容は LicenseDialog の文面をベースに作成できます。
+
+13.7 ライセンスのまとめ
+  Drive Indicator AI のライセンスは :
+    • 個人利用・非商用利用は自由
+    • 改変不可・再配布可
+    • 無保証 (AS IS)
+    • ライセンス文はアプリ内で管理
+  という、シンプルで安全な構造になっています。
