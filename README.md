@@ -1,5 +1,5 @@
 # Drive Indicator AI - README
 
-# [日本語](doc/ja/README(ja).md)
+# [日本語](docs/ja/README(ja).md)
 
-# [English](doc/en/README(en).md)
+# [English](docs/en/README(en).md)
