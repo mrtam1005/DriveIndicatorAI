@@ -1,4 +1,4 @@
-[←前へ](12_Limitations(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 13. ライセンス (License)  
     Drive Indicator AI は、個人利用および非商用利用を前提として無償で提供されるソフトウェアです。  
@@ -65,4 +65,4 @@
       • ライセンス文はアプリ内で管理  
     という、シンプルで安全な構造になっています。  
 
-[←前へ](12_Limitations(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  

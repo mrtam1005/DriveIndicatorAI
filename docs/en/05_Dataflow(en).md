@@ -1,4 +1,4 @@
-[←前へ](04_UI(en).md) | [次へ→](06_DPI(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](04_UI(en).md) | [次へ→](06_DPI(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 5\. データフロー詳細 (Data Flow Details)  
     Drive Indicator AI は、  
@@ -140,4 +140,4 @@
       ･ ログが全体を支える  
           例外や内部動作をすべて記録  
 
-[←前へ](04_UI(en).md) | [次へ→](06_DPI(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](04_UI(en).md) | [次へ→](06_DPI(en).md) | [先頭へ](00_Technical_documents(en).md)  

@@ -1,4 +1,4 @@
-[←前へ](03_Components(ja).md) | [次へ→](05_Dataflow(ja).md) | [先頭へ](00_Technical_Documents(ja).md)  
+[←前へ](03_Components(ja).md) | [次へ→](05_Dataflow(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
 ## 4\. UI コンポーネント (User Interface Components)  
     Drive Indicator AI の UI は、ユーザー操作を最小限に抑えつつ、  
@@ -98,4 +98,4 @@
       ･ 壊れにくい UI  
           Dispose、Anchor、Dock、ControlBox など WinForms の落とし穴を避けている。  
 
-[←前へ](03_Components(ja).md) | [次へ→](05_Dataflow(ja).md) | [先頭へ](00_Technical_Documents(ja).md)  
+[←前へ](03_Components(ja).md) | [次へ→](05_Dataflow(ja).md) | [先頭へ](00_Technical_documents(ja).md)  

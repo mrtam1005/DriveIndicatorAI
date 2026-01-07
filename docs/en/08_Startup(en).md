@@ -1,4 +1,4 @@
-[←前へ](07_ETW(en).md) | [次へ→](09_Logging(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](07_ETW(en).md) | [次へ→](09_Logging(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 8\. 自動実行 (StartupHelper)  
     Drive Indicator AI は、Windows 起動時に自動でアプリを実行するために、  
@@ -144,4 +144,4 @@
     という、非常に優れた設計になっています。  
     一般的なユーティリティよりも一段上の品質で、企業向けアプリでも通用するレベルです。  
 
-[←前へ](07_ETW(en).md) | [次へ→](09_Logging(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](07_ETW(en).md) | [次へ→](09_Logging(en).md) | [先頭へ](00_Technical_documents(en).md)  

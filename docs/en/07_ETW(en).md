@@ -1,4 +1,4 @@
-[←前へ](06_DPI(en).md) | [次へ→](08_Startup(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](06_DPI(en).md) | [次へ→](08_Startup(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 7\. ETW 詳細 (Event Tracing for Windows Details)  
     Drive Indicator AI の最大の特徴のひとつが、  
@@ -125,4 +125,4 @@
       5. DriveMonitor と統合  
           PerfCounter と ETW を統合し、全ドライブを一元管理。  
 
-[←前へ](06_DPI(en).md) | [次へ→](08_Startup(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](06_DPI(en).md) | [次へ→](08_Startup(en).md) | [先頭へ](00_Technical_documents(en).md)  

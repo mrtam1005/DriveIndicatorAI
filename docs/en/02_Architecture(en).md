@@ -1,4 +1,4 @@
-[←前へ](01_Overview(en).md) | [次へ→](03_Components(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](01_Overview(en).md) | [次へ→](03_Components(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 2\. アーキテクチャ構成図 (Architecture Overview)  
     Drive Indicator AI は、  
@@ -106,4 +106,4 @@
     ･ ログが全体を支える  
         例外や内部動作をすべて記録し、デバッグしやすい  
 
-[←前へ](01_Overview(en).md) | [次へ→](03_Components(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](01_Overview(en).md) | [次へ→](03_Components(en).md) | [先頭へ](00_Technical_documents(en).md)  

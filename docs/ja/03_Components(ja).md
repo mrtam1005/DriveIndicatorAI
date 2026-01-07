@@ -1,4 +1,4 @@
-[←前へ](02_Architecture(ja).md) | [次へ→](04_UI(ja).md) | [先頭へ](00_Technical_Documents(ja).md)  
+[←前へ](02_Architecture(ja).md) | [次へ→](04_UI(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
 ## 3\. 主要コンポーネントの詳細 (Core Components)  
     Drive Indicator AI は、複数の独立したコンポーネントが協調して動作する構造になっています。  

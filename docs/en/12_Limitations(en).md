@@ -1,4 +1,4 @@
-[←前へ](11_Extensibility(en).md) | [次へ→](13_License(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](11_Extensibility(en).md) | [次へ→](13_License(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 12. 既知の制限事項 (Known Limitations)  
     Drive Indicator AI は Windows の I/O 監視機能 (PerformanceCounter / ETW) を活用して動作しますが、  
@@ -104,4 +104,4 @@
     Drive Indicator AI はこれらの制限を考慮しつつ、  
     可能な範囲で最も安定した動作を実現するよう設計されています。  
 
-[←前へ](11_Extensibility(en).md) | [次へ→](13_License(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](11_Extensibility(en).md) | [次へ→](13_License(en).md) | [先頭へ](00_Technical_documents(en).md)  

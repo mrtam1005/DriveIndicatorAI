@@ -1,4 +1,4 @@
-[←前へ](10_i18n(en).md) | [次へ→](12_Limitations(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](10_i18n(en).md) | [次へ→](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 11. 拡張方法 (Extensibility Guide)  
     Drive Indicator AI は、UI・監視ロジック・描画ロジック・国際化などが明確に分離されているため、  
@@ -155,4 +155,4 @@
     Drive Indicator AI は、個人ユーティリティでありながら、  
     企業向けアプリ並みの拡張性を持つ設計になっています。  
 
-[←前へ](10_i18n(en).md) | [次へ→](12_Limitations(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](10_i18n(en).md) | [次へ→](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  

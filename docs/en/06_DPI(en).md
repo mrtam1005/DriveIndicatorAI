@@ -1,4 +1,4 @@
-[←前へ](05_Dataflow(en).md) | [次へ→](07_ETW(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](05_Dataflow(en).md) | [次へ→](07_ETW(en).md) | [先頭へ](00_Technical_documents(en).md)  
 
 ## 6\. DPI 対応の詳細 (High-DPI Support)  
     Drive Indicator AI は、Windows の DPI 設定に応じて 16px / 32px のアイコンを自動切り替えし、  
@@ -97,4 +97,4 @@
         • 新しい DPI (48px など) にも簡単に対応可能  
         • アイコンテーマの追加も容易  
 
-[←前へ](05_Dataflow(en).md) | [次へ→](07_ETW(en).md) | [先頭へ](00_Technical_Documents(en).md)  
+[←前へ](05_Dataflow(en).md) | [次へ→](07_ETW(en).md) | [先頭へ](00_Technical_documents(en).md)  

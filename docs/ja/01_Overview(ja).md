@@ -1,4 +1,4 @@
-[←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_Documents(ja).md)  
+[←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
 ## 1\. 概要 (Overview)  
 
@@ -69,5 +69,5 @@
     │ TrayIconManager  │ ← 通知領域に反映  
     └─────────┘  
 
-[←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_Documents(ja).md)  
+[←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
