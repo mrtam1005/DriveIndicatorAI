@@ -64,7 +64,7 @@
     3. 任意のフォルダに展開
     4. DriveIndicatorAI.exe を実行
    [1. の .NET Runtime 10.0.1 (Windows用) はこちらから](https://dotnet.microsoft.com/ja-jp/download/dotnet/10.0)  
-   [2. の Drive Indicator AI の Release ページ はこちらから](https://github.com/mrtam1005/DriveIndicatorAI)  
+   [2. の Drive Indicator AI の Release ページ はこちらから](https://github.com/mrtam1005/DriveIndicatorAI/tree/master/Release)  
 
 ## 4\. 使い方
     DriveIndicatorAI.exe を実行するとタスクトレイにアイコンが表示されます。

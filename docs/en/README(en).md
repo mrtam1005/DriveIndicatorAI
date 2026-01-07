@@ -64,7 +64,7 @@
     3. Extract the files to a folder of your choice.
     4. Run DriveIndicatorAI.exe.
    [1. .NET Runtime 10.0.1 (for Windows) is available here](https://dotnet.microsoft.com/ja-jp/download/dotnet/10.0)  
-   [2. Drive Indicator AI Release page is available here](https://github.com/mrtam1005/DriveIndicatorAI)  
+   [2. Drive Indicator AI Release page is available here](https://github.com/mrtam1005/DriveIndicatorAI/tree/master/Release)  
 
 ## 4\. How to Use
     When you run DriveIndicatorAI.exe, an icon will appear in the task tray.
