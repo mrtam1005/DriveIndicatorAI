@@ -7,51 +7,10 @@
     ここでは、全体構造を ｢コンポーネント図｣ ｢クラス依存関係図｣ ｢処理フロー図｣ の3つに分けて説明します。  
 
 ### 2.1 コンポーネント構成図 (Component Diagram)  
-
-    ┌──────────────┐  
-    │      SettingsManager       │  
-    │  設定の読み書き・永続化    │  
-    └──────┬───────┘  
-                  │  
-                  ▼  
-    ┌──────────────┐  
-    │        DriveMonitor        │  
-    │ ・PerformanceCounter 監視  │  
-    │ ・ETW (RAMドライブ) 監視   │  
-    │  → DriveStatus\[] を生成  │  
-    └──────┬───────┘  
-                  │  
-                  ▼  
-    ┌──────────────┐  
-    │        IconRenderer        │  
-    │ ・DPI判定 (16px / 32px)    │  
-    │ ・PNG合成描画              │  
-    │ ・フォント描画(FontHelper) │  
-    │  → Icon\[] を生成         │  
-    └──────┬───────┘  
-                  │  
-                  ▼  
-    ┌──────────────┐  
-    │       TrayIconManager      │  
-    │ ・通知領域アイコンの管理   │  
-    │ ・コンテキストメニュー     │  
-    │ ・アイコン更新ループ       │  
-    └──────────────┘  
+<img src="images/Fig_(en)_2.1.png" width="218" alt="Fig_2.1">
 
 ### 2.2 クラス依存関係図 (Class Dependency Diagram)  
-
-    SettingsManager  
-          ▲  
-          │  設定値を参照  
-          │  
-     DriveMonitor ───────┐  
-          │                    │ DriveStatus\[]  
-          ▼                    ▼  
-    EtwRamIoMonitor        IconRenderer ────→ FontHelper  
-          │                    │  
-          │ ETWイベント        │ Icon  
-          ▼                    ▼  
-       LogHelper ←─── TrayIconManager  
+<img src="images/Fig_(en)_2.2.png" width="408" alt="Fig_2.2"><br>
 
     依存関係のポイント  
       ･ TrayIconManager はアプリの中心で、DriveMonitor と IconRenderer の両方を使う  
@@ -62,37 +21,7 @@
 
 ### 2.3 処理フロー図 (監視 → 描画 → 表示)  
     Drive Indicator AI のメインループは以下のように動作します。  
-    ───────────────────  
-                 アプリ起動  
-                     │  
-                     ▼  
-            SettingsManager.Load()  
-                     │  
-                     ▼  
-            TrayIconManager.Start()  
-                     │  
-                     ▼  
-    ───────────────────  
-      メインループ (一定間隔で繰り返し)  
-    ───────────────────  
-                     │  
-                     ▼  
-           DriveMonitor.Update()  
-            ･ PerfCounter で I/O 取得  
-            ･ ETW で RAMドライブ I/O 取得  
-            → DriveStatus\[] を生成  
-                     │  
-                     ▼  
-    IconRenderer.RenderIcons(DriveStatus\[])  
-            ･ PNG 読み込み  
-            ･ DPI に応じて描画  
-            ･ DriveLetter を描画  
-            → Icon\[]  
-                     │  
-                     ▼  
-      TrayIconManager.UpdateIcons(Icon\[])  
-          ・通知領域アイコンを更新  
-    ───────────────────  
+<img src="images/Fig_(en)_2.3.png" width="249" alt="Fig_2.3">
 
 ### 2.4 アーキテクチャの特徴 (まとめ)  
     ･ 責務分離が明確  

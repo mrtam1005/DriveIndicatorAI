@@ -28,13 +28,8 @@
 
 ### 7.2 ETW で監視するイベント  
     Drive Indicator AI が監視している ETW イベントは以下の 2種類です :  
-      ┌───────┬─────────────┐  
-      │ イベント名   │ 説明                     │  
-      ┝━━━━━━━┿━━━━━━━━━━━━━┥  
-      │ FileIORead   │ ファイル読み取りイベント │  
-      ├───────┼─────────────┤  
-      │ FileIOWrite  │ ファイル書き込みイベント │  
-      └───────┴─────────────┘  
+<img src="images/Fig_(en)_7.2.png" width="267" alt="Fig_7.2"><br>
+
     これらは KernelTraceControl プロバイダから発行されます。  
 
 ### 7.3 EtwRamIoMonitor の構造  

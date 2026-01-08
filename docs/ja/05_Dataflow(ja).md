@@ -50,19 +50,7 @@
 
 #### 5.2.3 DriveStatus の生成  
     DriveStatus は以下の情報を持つ :  
-      ┌────────┬─────────┐  
-      │ プロパティ     │ 説明             │  
-      ┝━━━━━━━━┿━━━━━━━━━┥  
-      │ DriveLetter    │ ドライブ文字     │  
-      ├────────┼─────────┤  
-      │ IsReadActive   │ 読み取り中か     │  
-      ├────────┼─────────┤  
-      │ IsWriteActive  │ 書き込み中か     │  
-      ├────────┼─────────┤  
-      │ ReadBytes      │ 読み取りバイト数 │  
-      ├────────┼─────────┤  
-      │ WriteBytes     │ 書き込みバイト数 │  
-      └────────┴─────────┘  
+<img src="images/Fig_(ja)_5.2.3.png" width="235" alt="Fig_5.2.3">
 
 ### 5.3 アイコン描画 → IconRenderer  
     DriveStatus\[] を受け取った TrayIconManager は、IconRenderer にアイコン描画を依頼します。  

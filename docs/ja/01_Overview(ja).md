@@ -50,24 +50,7 @@
     この構造により、UI とロジックが完全に分離され、拡張性・保守性が非常に高いアプリになっています。  
 
 ### 1.4 データフロー概要 (簡易版)  
-    ┌─────────┐  
-    │ SettingsManager  │ ← 設定読み込み  
-    └────┬────┘  
-              │  
-              ▼  
-    ┌─────────┐  
-    │   DriveMonitor   │ ← PerfCounter / ETW  
-    └────┬────┘  
-              │ DriveStatus\[]  
-              ▼  
-    ┌─────────┐  
-    │   IconRenderer   │ ← DPI に応じて描画  
-    └────┬────┘  
-              │ Icon\[]  
-              ▼  
-    ┌─────────┐  
-    │ TrayIconManager  │ ← 通知領域に反映  
-    └─────────┘  
+<img src="images/Fig_(ja)_1.4.png" width="298" alt="Fig_2.1"><br>
 
 [←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
