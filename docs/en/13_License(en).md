@@ -1,68 +1,68 @@
-[←前へ](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](12_Limitations(en).md) | [Top](00_Technical_documents(en).md)  
 
-## 13. ライセンス (License)  
-    Drive Indicator AI は、個人利用および非商用利用を前提として無償で提供されるソフトウェアです。  
-    ユーザーが安心して利用できるよう、アプリ内の LicenseDialog に記載されている内容をベースに、  
-    本章ではライセンスの概要と開発者向けの注意点をまとめます。  
+## 13. License  
+    Drive Indicator AI is software provided free of charge for personal and non-commercial use.  
+    To ensure users' peace of mind, this chapter summarizes the license and important points for developers,  
+    based on the information provided in the License Dialog within the app.  
 
-### 13.1 ライセンスの基本方針  
-    Drive Indicator AI は以下の方針で提供されます :  
-      • 無償で利用可能  
-      • 個人利用および非商用利用を許可  
-      • 再配布は許可 (改変不可)  
-      • 無保証 (No Warranty)  
-      • 開発者は責任を負わない  
-    これは一般的なフリーウェアのライセンス方針に近い内容です。  
+### 13.1 Basic License Policy  
+    Drive Indicator AI is provided under the following policy :  
+      • Free to use  
+      • Personal and non-commercial use permitted  
+      • Redistribution permitted (no modifications allowed)  
+      • No warranty  
+      • Developer assumes no responsibility  
+    This policy is similar to that of a typical freeware license.  
 
-### 13.2 利用許諾 (Permission)  
-    ユーザーは以下の行為を行うことができます :  
-      1. 利用  
-        Drive Indicator AI を個人用途で自由に利用できます。  
-      2. 再配布  
-        Drive Indicator AI を第三者に配布できます。  
-        ただし、改変したバイナリの配布は禁止されています。  
-      3. スクリーンショットの利用  
-        ブログ・SNS・レビュー記事などで自由に使用できます。  
+### 13.2 Permission  
+    Users are permitted to do the following :  
+      1. Use  
+        You are free to use Drive Indicator AI for personal use.  
+      2. Redistribution  
+        You can distribute Drive Indicator AI to third parties.  
+        However, distribution of modified binaries is prohibited.  
+      3. Use of Screenshots  
+        You may use them freely on blogs, social media, review articles, etc.  
 
-### 13.3 禁止事項 (Restrictions)  
-    以下の行為は禁止されています :  
-      1. 商用利用  
-        企業内での業務利用、製品への組み込み、販売目的での利用は不可。  
-      2. 改変したバイナリの配布  
-        DriveIndicatorAI.exe を改造して配布することは禁止。  
-      3. リバースエンジニアリング  
-        逆アセンブル・逆コンパイルなどの解析行為は禁止。  
-      4. 著作権表示の削除  
-        アプリ内の著作権表記を削除・改変することは禁止。  
+### 13.3 Restrictions  
+    The following actions are prohibited :  
+      1. Commercial Use  
+        In-company business use, embedding in products, and use for sales purposes are prohibited.  
+      2. Distribution of Modified Binaries  
+        Modifying and distributing DriveIndicatorAI.exe is prohibited.  
+      3. Reverse Engineering  
+        Analysis such as disassembly and decompilation is prohibited.  
+      4. Removal of Copyright Notices  
+        Removing or altering copyright notices within the app is prohibited.  
 
-### 13.4 免責事項 (Disclaimer)  
-    Drive Indicator AI は 無保証 (AS IS) で提供されます。  
-      • 本ソフトウェアを使用したことによる損害について、開発者は一切責任を負いません。  
-      • データ損失、システム障害、業務停止などが発生しても補償はありません。  
-      • 本ソフトウェアの動作は完全性を保証するものではありません。  
-    これはフリーウェアとして一般的な免責事項です。  
+### 13.4 Disclaimer  
+    Drive Indicator AI is provided "AS IS".  
+      • The developer assumes no responsibility for any damages resulting from the use of this software.  
+      • No compensation is provided for data loss, system failures, or business interruptions.  
+      • The completeness of this software's operation is not guaranteed.  
+    This is a standard disclaimer for freeware.  
 
-### 13.5 ライセンス文の管理方法 (開発者向け)  
-    Drive Indicator AI のライセンス文は :  
-      • LicenseDialog 内にハードコード  
-      • 言語コードに応じて日本語/英語を切り替え  
-      • 外部ファイルに依存しない安全な構造  
+### 13.5 License Management (For Developers)  
+    Drive Indicator AI's license text is :  
+      • Hard-coded within the LicenseDialog  
+      • Switches between Japanese and English depending on the language code  
+      • Secure structure that does not rely on external files  
 
-    ● ハードコード方式を採用した理由  
-      • ライセンス文はアプリの一部であり、外部ファイル破損の影響を受けない  
-      • JSON に含めると翻訳漏れや破損のリスクがある  
-      • セキュリティ上、外部ファイルに依存しない方が安全  
+    ● Reasons for adopting a hard-coded approach  
+      • The license text is part of the app and is not affected by external file corruption  
+      • Including it in JSON carries the risk of translation omissions or corruption  
+      • From a security perspective, it is safer not to rely on external files  
 
-### 13.6 Github での LICENSE ファイルについて  
-    Github で公開する場合は、LICENSE.txt をリポジトリ直下に配置することが推奨されます。  
-    内容は LicenseDialog の文面をベースに作成できます。   
+### 13.6 About the LICENSE file on Github  
+    When publishing on Github, it is recommended to place LICENSE.txt directly under the repository.  
+    You can create the content based on the LicenseDialog text.  
 
-### 13.7 ライセンスのまとめ  
-    Drive Indicator AI のライセンスは :  
-      • 個人利用・非商用利用は自由  
-      • 改変不可・再配布可  
-      • 無保証 (AS IS)  
-      • ライセンス文はアプリ内で管理  
-    という、シンプルで安全な構造になっています。  
+### 13.7 License Summary  
+    Drive Indicator AI's license is :  
+      • Free for personal and non-commercial use  
+      • No modifications, redistribution permitted  
+      • No warranty "AS IS"  
+      • License text managed within the app  
+    This is a simple and secure structure.  
 
-[←前へ](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](12_Limitations(en).md) | [Top](00_Technical_documents(en).md)  

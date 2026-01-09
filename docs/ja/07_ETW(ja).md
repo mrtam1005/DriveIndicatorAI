@@ -1,6 +1,6 @@
 [←前へ](06_DPI(ja).md) | [次へ→](08_Startup(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
-## 7\. ETW 詳細 (Event Tracing for Windows Details)  
+## 7\. ETW 詳細 (Event Tracing for Windows 詳細)  
     Drive Indicator AI の最大の特徴のひとつが、  
     RAMドライブ の I/O を ETW (Event Tracing for Windows) で高精度に監視できることです。  
 
@@ -58,7 +58,7 @@
     • 読み取り/書き込みフラグを更新  
 
 ### 7.4 DriveLetter の抽出方法  
-    ETW の FileIO イベントには、ファイルパス (例 : C:\\path\\file.txt) が含まれています。  
+    ETW の FileIO イベントには、ファイルパス (例 : C:\path\file.txt) が含まれています。  
     Drive Indicator AI はこのパスから :  
       ──────────────────────────────────  
       最初の 1文字 (例 : C)  
@@ -66,7 +66,7 @@
     を DriveLetter として抽出します。  
     RAMドライブ の場合も同様に :  
       ──────────────────────────────────  
-      R:\\temp\\file.bin → R  
+      R:\temp\file.bin → R  
       ──────────────────────────────────  
     と取得できます。  
 

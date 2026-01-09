@@ -1,107 +1,96 @@
-[←前へ](11_Extensibility(en).md) | [次へ→](13_License(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](11_Extensibility(en).md) | [Next→](13_License(en).md) | [Top](00_Technical_documents(en).md)  
 
-## 12. 既知の制限事項 (Known Limitations)  
-    Drive Indicator AI は Windows の I/O 監視機能 (PerformanceCounter / ETW) を活用して動作しますが、  
-    これらの仕組みには OS 側の制約や外部環境の影響があり、アプリ側で完全に制御できない部分があります。  
-    この章では、Drive Indicator AI の既知の制限事項と、その理由・背景を説明します。  
+## 12. Known Limitations
+    Drive Indicator AI operates using Windows I/O monitoring functions (PerformanceCounter/ETW).  
+    However, these mechanisms are subject to OS constraints and external environmental influences,  
+    and there are some aspects that cannot be fully controlled by the app.  
+    This chapter explains the known limitations of Drive Indicator AI and  
+    the reasons and background for them.  
 
-### 12.1 ETW が利用できない環境が存在する  
-    ETW (Event Tracing for Windows) は通常ユーザーモードで利用できますが、  
-    以下の環境では動作しない場合があります :  
+### 12.1 ETW is Unavailable in Some Environments  
+    ETW (Event Tracing for Windows) can normally be used in user mode,  
+    but it may not work in the following environments :  
 
-      ● 制限が発生するケース  
-        • 企業環境で ETW がポリシーにより無効化されている  
-        • セキュリティソフトが ETW をブロックしている  
-        • Windows のトレースサービスが停止している  
-        • 他アプリが同名セッションを占有している  
+      ● Restrictions  
+        • ETW is disabled by policy in a corporate environment  
+        • Security software blocks ETW  
+        • The Windows tracing service is stopped  
+        • Another application occupies a session with the same name  
 
-      ● 影響  
-        • RAM ドライブの I/O が取得できない  
-        • DriveMonitor が RAM ドライブを ｢常にアイドル｣ と判定する  
-        • ログに ETW エラーが記録される  
+      ● Impact  
+        • RAM drive I/O cannot be obtained  
+        • DriveMonitor determines the RAM drive to be "always idle"  
+        • ETW errors are recorded in the log  
 
-      ● 回避策  
-        • セッション名をユニークにして衝突を避ける (既に実装済み)  
-        • ETW が使えない場合は RAM ドライブ監視をスキップ  
+      ● Workarounds  
+        • Use unique session names to avoid collisions (already implemented)  
+        • Skip RAM drive monitoring if ETW is unavailable  
 
-### 12.2 一部の RAMドライブ (RAMディスク) ソフトとの相性  
-    RAMドライブ はソフトによって実装が異なるため、ETW の FileIO イベントが発生しない製品があります。  
+### 12.2 Incompatibility with Some RAM Drive (RAM Disk) Software  
+    Since RAM drive implementations vary depending on the software, ETW FileIO events may not occur in some products.  
 
-      ● 影響  
-        • 読み書きが行われても ETW にイベントが届かない  
-        • Drive Indicator AI では ｢アイドル状態(読み/書き無し)｣ として表示される  
+      ● Impact  
+        • Events are not sent to ETW even when reads or writes are performed.  
+        • Drive Indicator AI displays the drive as "Idle (no reads or writes)".  
 
-      ● 代表例  
-        • 独自ドライバで I/O を処理する RAMドライブ  
-        • Windows の FileIO イベントを発行しない製品  
+      ● Typical Examples  
+        • RAM drives that use proprietary drivers to handle I/O.  
+        • Products that do not issue Windows FileIO events.  
 
-### 12.3 PerformanceCounter の制限  
-    PerformanceCounter (LogicalDisk) は Windows の仕様により、以下の制限があります。  
+### 12.3 PerformanceCounter Limitations  
+    PerformanceCounter (LogicalDisk) has the following limitations due to Windows specifications.  
 
-      ● 制限内容  
-        • 一部の USB メモリが ｢ディスク｣ と認識されない  
-        • ドライブ文字が割り当てられていないボリュームは監視不可  
-        • インスタンス名が OS により変動することがある  
-        • カウンタが初期化されるまで値が 0 になることがある  
+      ● Limitations  
+        • Some USB memory sticks are not recognized as "disks".  
+        • Volumes without a drive letter cannot be monitored.  
+        • Instance names may vary depending on the OS.  
+        • The counter value may be 0 until it is initialized.  
 
-      ● 影響  
-        • 特定のドライブが監視対象に表示されない  
-        • 起動直後に I/O が取得できない場合がある  
+      ● Impacts  
+        • Certain drives are not displayed as monitored targets.  
+        • I/O may not be acquired immediately after startup.  
 
-### 12.4 高 DPI 環境での WinForms の制約  
-    Drive Indicator AI は DPI 対応を独自実装していますが、  
-    WinForms 自体の制約により以下の問題が発生する可能性があります。  
+### 12.4 WinForms Limitations in High DPI Environments  
+    Drive Indicator AI implements its own DPI support,  
+    but the following issues may occur due to limitations in WinForms itself.  
 
-      ● 制限内容  
-        • Windows の DPI 設定を変更した直後は再起動が必要  
-        • 一部の環境で PictureBox の描画が遅延する  
-        • マルチモニタ環境で DPI が混在すると描画が不安定になる場合がある  
+      ● Restrictions  
+        • A restart is required immediately after changing the Windows DPI setting.  
+        • PictureBox rendering may be delayed in some environments.  
+        • Mixing DPI settings in a multi-monitor environment may cause unstable rendering.  
 
-      ● 影響  
-        • サンプルアイコンの表示が一瞬乱れる  
-        • DPI 切り替えが即時反映されない  
+      ● Impacts  
+        • Sample icons may be momentarily distorted.  
+        • DPI changes may not be reflected immediately.  
 
-### 12.5 タスクスケジューラが無効化されている環境  
-    Drive Indicator AI の自動実行はタスクスケジューラ方式ですが、  
-    企業環境ではタスクスケジューラが無効化されている場合があります。  
+### 12.5 Environments with Task Scheduler Disabled  
+    Drive Indicator AI runs automatically via Task Scheduler,  
+    but Task Scheduler may be disabled in corporate environments.  
 
-      ● 影響  
-        • 自動実行が登録できない  
-        • schtasks.exe がエラーを返す  
-        • ログにエラーが記録される  
+      ● Impacts  
+        • Unable to register automatic execution.  
+        • schtasks.exe returns an error.  
+        • Errors are recorded in the log.  
 
-### 12.6 権限の制限による影響  
-    Drive Indicator AI は管理者権限不要で動作しますが、  
-    権限が極端に制限された環境では以下の問題が発生します。  
+### 12.6 Impacts of Permission Restrictions  
+    Drive Indicator AI runs without administrative privileges,  
+    but the following issues may occur in environments with extremely restricted privileges.  
 
-      ● 制限内容  
-        • TEMP フォルダへの書き込みが禁止されている  
-        • PerformanceCounter へのアクセスが制限されている  
-        • ETW がブロックされている  
+      ● Restrictions  
+        • Writing to the TEMP folder is prohibited  
+        • Access to PerformanceCounter is restricted  
+        • ETW is blocked  
 
-      ● 影響  
-        • ログが保存できない  
-        • 監視が動作しない  
-        • アプリが実行できない場合がある  
+      ● Impact  
+        • Logs cannot be saved  
+        • Monitoring does not work  
+        • Apps may not run  
 
-### 12.7 既知の制限事項まとめ  
-    Drive Indicator AI の制限は主に Windows の仕様 と 外部環境 に起因します。  
-      ┌──────────────┬─────────────┬─────────────┐  
-      │ 項目                       │ 原因                     │ 影響                     │  
-      ┝━━━━━━━━━━━━━━┿━━━━━━━━━━━━━┿━━━━━━━━━━━━━┥  
-      │ ETW が使えない             │ ポリシー / セキュリティ  │ RAMドライブ監視不可      │  
-      ├──────────────┼─────────────┼─────────────┤  
-      │ RAMドライブの相性          │ 製品ごとの実装差         │ I/O が取得できない       │  
-      ├──────────────┼─────────────┼─────────────┤  
-      │ PerformanceCounter の制限  │ Windows の仕様           │ 一部ドライブが監視不可   │  
-      ├──────────────┼─────────────┼─────────────┤  
-      │ 高 DPI の制約              │ WinForms の仕様          │ 描画が不安定になる場合   │  
-      ├──────────────┼─────────────┼─────────────┤  
-      │ タスクスケジューラー無効   │ 企業環境の制限           │ 自動実行不可             │  
-      ├──────────────┼─────────────┼─────────────┤  
-      │ 権限制限                   │ セキュリティ設定         │ ログ / 監視が動作しない  │  
-      └──────────────┴─────────────┴─────────────┘  
-    Drive Indicator AI はこれらの制限を考慮しつつ、  
-    可能な範囲で最も安定した動作を実現するよう設計されています。  
+### 12.7 Summary of Known Limitations  
+    Drive Indicator AI limitations are primarily due to Windows specifications and external factors.  
+<img src="images/Fig_(en)_12.7.png" width="595" alt="Fig_12.7"><br>
 
-[←前へ](11_Extensibility(en).md) | [次へ→](13_License(en).md) | [先頭へ](00_Technical_documents(en).md)  
+    Drive Indicator AI has been designed to take these limitations into account  
+    and provide the most stable operation possible.  
+
+[←Previous](11_Extensibility(en).md) | [Next→](13_License(en).md) | [Top](00_Technical_documents(en).md)  

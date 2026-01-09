@@ -1,100 +1,91 @@
-[←前へ](05_Dataflow(en).md) | [次へ→](07_ETW(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](05_Dataflow(en).md) | [Next→](07_ETW(en).md) | [Top](00_Technical_documents(en).md)  
 
-## 6\. DPI 対応の詳細 (High-DPI Support)  
-    Drive Indicator AI は、Windows の DPI 設定に応じて 16px / 32px のアイコンを自動切り替えし、  
-    高解像度環境でも美しいアイコン表示を実現しています。  
-    WinForms は DPI 対応が難しいことで有名ですが、Drive Indicator AI は 独自の DPI 設計により、  
-    安定した描画と UI 表示を実現しています。  
+## 6\. DPI Support Details (High-DPI Support)  
+    Drive Indicator AI automatically switches between 16px and 32px icons depending on the Windows DPI setting,  
+    ensuring beautiful icon display even in high-resolution environments.  
+    WinForms is notoriously difficult to support DPI, but Drive Indicator AI's unique DPI design ensures stable drawing  
+    and UI display.  
 
-### 6.1 DPI 対応の目的  
-    Windows では DPI によってタスクトレイのアイコンサイズが変化します :  
-      ┌─────┬─────┬────────┐  
-      │   DPI    │ スケール │ アイコンサイズ │  
-      ┝━━━━━┿━━━━━┿━━━━━━━━┥  
-      │  96 DPI  │  100 %   │ W16×H16ドット │  
-      ├─────┼─────┼────────┤  
-      │ 120 DPI  │  125 %   │ W16×H16ドット │  
-      ├─────┼─────┼────────┤  
-      │ 144 DPI  │  150 %   │ W32×H32ドット │  
-      ├─────┼─────┼────────┤  
-      │ 192 DPI  │  200 %   │ W32×H32ドット │  
-      └─────┴─────┴────────┘  
-    Drive Indicator AI はこの仕様に合わせて、DPI に応じた最適なアイコンサイズを自動選択します。  
+### 6.1 Purpose of DPI Support  
+    In Windows, the size of task tray icons changes depending on the DPI :  
+<img src="images/Fig_(en)_6.1.png" width="235" alt="Fig_6.1"><br>
 
-### 6.2 DPI 判定の仕組み  
-    DPI 判定は以下の 2つの情報を組み合わせて行われます :  
-      1. SettingsManager.SizeChangeDpi (固定値 144 DPI)  
-      2. Graphics.DpiX (実行時 DPI)  
+    Drive Indicator AI automatically selects the optimal icon size for the DPI setting based on this specification.  
 
-#### 6.2.1 DPI 判定ロジック (簡略版)  
-      ──────────────────────────────────  
+### 6.2 How DPI is Determined  
+    DPI is determined by combining the following two pieces of information :  
+      1. SettingsManager.SizeChangeDpi (fixed value of 144 DPI)  
+      2. Graphics.DpiX (runtime DPI)  
+
+#### 6.2.1 DPI Determination Logic (Simplified)  
+      ─────────────────────────────────────────  
       if (dpi >= SettingsManager.SizeChangeDpi)  
           IconSize = 32px  
       else  
           IconSize = 16px  
-      ──────────────────────────────────  
-    SizeChangeDpi は設定ファイルで管理されており、デフォルトでは 144 DPI (150%) に設定されています。  
+      ─────────────────────────────────────────  
+    SizeChangeDpi is managed in the settings file and is set to 144 DPI (150%) by default.  
 
-#### 6.3 IconRenderer による DPI 対応  
-    IconRenderer は DPI に応じて以下を切り替えます :  
-      • アイコンサイズ (16px / 32px)  
-      • ドライブ文字のフォントサイズ  
-      • PNG アイコンの読み込み先フォルダ (16 / 32)  
-      • 描画位置 (DriveSize / LetterSize)  
+### 6.3 DPI Awareness with IconRenderer  
+    IconRenderer changes the following depending on the DPI :  
+      • Icon size (16px / 32px)  
+      • Drive letter font size  
+      • PNG icon destination folder (16 / 32)  
+      • Drawing position (DriveSize / LetterSize)  
 
-#### 6.3.1 アイコンサイズの決定  
-    ──────────────────────────────────  
-    int iconSize = (dpi >= SizeChangeDpi) ? 32  : 16;  
-    ──────────────────────────────────  
+#### 6.3.1 Determining Icon Size  
+    ────────────────────────────────────────────────  
+    int iconSize = (dpi >= SizeChangeDpi) ? 32 : 16;  
+    ────────────────────────────────────────────────  
 
-#### 6.3.2 PNG の読み込み先  
-    ──────────────────────────────────  
+#### 6.3.2 PNG Destination  
+    ────────────────────────  
     Icons/Default/16/xxx.png  
     Icons/Default/32/xxx.png  
-    ──────────────────────────────────  
+    ────────────────────────  
 
-#### 6.3.3 描画位置の調整  
-    DriveSize / LetterSize は DPI に応じて自動計算されるため、文字が潰れたり、位置がずれたりしない。  
+#### 6.3.3 Adjusting Drawing Position  
+    DriveSize / LetterSize is automatically calculated according to DPI, so characters will not be crushed or misaligned.  
 
-### 6.4 FontHelper による DPI フォント管理  
-    DPI 対応で最も難しいのが フォントサイズの管理です。  
-    Drive Indicator AI では、GraphicsUnit.Pixel を使用することで   
-    DPI の影響を受けないフォントを生成しています。  
+### 6.4 DPI Font Management with FontHelper  
+    The most difficult part of DPI support is managing font size.  
+    Drive Indicator AI generates fonts that are not affected   
+    by DPI by using GraphicsUnit.Pixel.  
 
-#### 6.4.1 フォント生成のポイント  
-    ──────────────────────────────────  
+#### 6.4.1 Key Points for Font Generation  
+    ───────────────────────────────────────────────────────────────────  
     new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Pixel);  
-    ──────────────────────────────────  
-      • Pixel 指定 → DPI による自動拡大縮小が発生しない  
-      • 文字が潰れない  
-      • アイコン内の DriveLetter が常に美しい  
+    ───────────────────────────────────────────────────────────────────  
+      • Specifying Pixels → No automatic scaling based on DPI.  
+      • Characters are not crushed.  
+      • The DriveLetter in the icon always looks beautiful.  
 
-#### 6.4.2 フォントキャッシュ  
-    FontHelper は DPI ごとにフォントをキャッシュし、毎回生成しないことでパフォーマンスを向上。  
+#### 6.4.2 Font Caching  
+    FontHelper caches fonts for each DPI, improving performance by not generating them every time.  
 
-### 6.5 SettingsForm の DPI サンプル表示  
-    SettingsForm の PictureBox では、実際のタスクトレイと同じロジックでサンプルアイコンを描画します。  
-      • IconRenderer と同じ描画処理  
-      • FontHelper の DPI フォント  
-      • PNG 合成  
-      • DriveLetter の描画  
-    これにより、ユーザーは 設定変更前に見た目を確認できる。  
+### 6.5 DPI Sample Display in SettingsForm  
+    The PictureBox in SettingsForm draws a sample icon using the same logic as the actual task tray.  
+      • Same rendering process as IconRenderer  
+      • FontHelper DPI fonts  
+      • PNG composition  
+      • DriveLetter rendering  
+    This allows users to see how the settings will look before changing them.  
 
-### 6.6 DPI 対応の設計思想 (まとめ)  
-    Drive Indicator AI の DPI 対応は、以下の特徴を持っています :  
-      1. WinForms の DPI 問題を回避  
-        • 自動スケーリングを使わず、すべて手動で制御  
-        • GraphicsUnit.Pixel による DPI 非依存フォント  
-      2. アイコン描画が DPI 完全対応  
-        • 16px / 32px の PNG を用意  
-        • DPI に応じて自動切り替え  
-        • DriveLetter の位置・サイズも DPI で調整  
-      3. UI も DPI に強い  
-        • SettingsForm のサンプル描画  
-        • PictureBox の DPI 対応  
-        • アイコンの見た目が常に安定  
-      4. 拡張性が高い  
-        • 新しい DPI (48px など) にも簡単に対応可能  
-        • アイコンテーマの追加も容易  
+### 6.6 DPI-Aware Design Philosophy (Summary)  
+    Drive Indicator AI's DPI support has the following features :  
+      1. Avoids WinForms DPI issues  
+        • No automatic scaling; everything is controlled manually  
+        • DPI-independent fonts using GraphicsUnit.Pixel  
+      2. Icon drawing is fully DPI-aware  
+        • 16px/32px PNGs are provided  
+        • Automatically switches according to DPI  
+        • DriveLetter position and size are also adjusted according to DPI  
+      3. The UI is also DPI-aware  
+        • Sample drawing in SettingsForm  
+        • PictureBox DPI support  
+        • Icon appearance is always consistent  
+      4. Highly extensible  
+        • Easily supports new DPIs (such as 48px)  
+        • Icon themes are easily added  
 
-[←前へ](05_Dataflow(en).md) | [次へ→](07_ETW(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](05_Dataflow(en).md) | [Next→](07_ETW(en).md) | [Top](00_Technical_documents(en).md)  

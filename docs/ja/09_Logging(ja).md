@@ -1,6 +1,6 @@
 [←前へ](08_Startup(ja).md) | [次へ→](09_i18n(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
-## 9\. ログ設計 (Logging System)  
+## 9\. ログ設計  
     Drive Indicator AI のログ機能は、アプリ内部の動作や例外を記録し、  
     ユーザー環境で発生した問題を迅速に特定するために設計されています。  
     ログは TEMP フォルダ配下に専用ディレクトリを作成し、1MB ローテーション方式で管理されます。  
@@ -26,7 +26,7 @@
 ### 9.2 ログファイルの保存場所  
     ログは TEMP フォルダ配下に保存されます。  
 
-      %TEMP%\\DriveIndicatorAI\\Logs\\  
+      %TEMP%\DriveIndicatorAI\Logs\  
         ├─ MessagesLog.log  
         └─ MessagesLog.old  
 
@@ -46,11 +46,11 @@
     • ログ無効化時は即 return  
 
 #### 9.3.2 ログ形式 (例)  
-    ──────────────────────────────────  
-    \[2025-12-12 14:33:21] DriveMonitor : Read=10240 Write=0 Drive=C  
-    \[2025-12-12 14:33:22] ETW : R drive write 4096 bytes  
-    \[2025-12-12 14:33:23] IconRenderer : DPI=144 IconSize=32px  
-    ──────────────────────────────────  
+    ─────────────────────────────────────────────────────────────────  
+    [2025-12-12 14:33:21] DriveMonitor : Read=10240 Write=0 Drive=C  
+    [2025-12-12 14:33:22] ETW : R drive write 4096 bytes  
+    [2025-12-12 14:33:23] IconRenderer : DPI=144 IconSize=32px  
+    ─────────────────────────────────────────────────────────────────  
 
 ### 9.4 ローテーション (RotateLog)  
     ログファイルが 1MB を超えた場合、以下の処理が自動で行われます :  

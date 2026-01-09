@@ -1,158 +1,159 @@
-[←前へ](10_i18n(en).md) | [次へ→](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](10_i18n(en).md) | [Next→](12_Limitations(en).md) | [Top](00_Technical_documents(en).md)  
 
-## 11. 拡張方法 (Extensibility Guide)  
-    Drive Indicator AI は、UI・監視ロジック・描画ロジック・国際化などが明確に分離されているため、  
-    後から機能を追加したり、カスタマイズしたりするのが容易です。  
-    この章では、開発者が Drive Indicator AI を拡張する際に必要なポイントをまとめます。  
+## 11. Extensibility Guide  
+    Drive Indicator AI clearly separates the UI, monitoring logic,  
+    rendering logic, internationalization, etc., making it easy to add features and customize later.  
+    This chapter summarizes the key points developers need to know when extending Drive Indicator AI.  
 
-### 11.1 新しい言語の追加 (i18n 拡張)  
-    Drive Indicator AI の多言語対応は JSON ベースで、非常に簡単に拡張できます。  
+### 11.1 Adding a New Language (i18n Extension)  
+    Drive Indicator AI's multilingual support is JSON-based, making it very easy to extend.  
 
-      手順 1 : 言語ファイルをコピー  
-        Resources/Language/lang_en.json をコピーして lang_xx.json のように名前を変更。  
+      Step 1: Copy the Language File  
+        Copy Resources/Language/lang_en.json and rename it to something like lang_xx.json.  
 
-      手順 2 : 翻訳を記述  
-        lang_xx.json の値を翻訳するだけ。  
+      Step 2: Write the Translation  
+        Simply translate the values ​​in lang_xx.json.  
 
-      手順 3 : languages.json に追加  
-        ─────────────────────────────────  
+      Step 3: Add to languages.json  
+        ───────────────────────────────────────────────────────────────────────────────────────────  
         [
-          { "Name": "عربي", "Code": "ar", "English_Name": "Arabic", "Japanese_Name": "アラビア語" },
-          {    ･
-          {    ･
-          {    ･
-          { "Name": "中国語 (繁体字) ", "Code": "zh-TW", "English_Name": "Chinese (Traditional)", "Japanese_Name": "中国語 (繁体字) " }
-          { "Name": "ＸＸＸＸ", "Code": "xx", "English_Name": "xxxx", "Japanese_Name": "ＸＸＸＸ語" }
+          { "Name": "عربي", "Code": "ar", "English_Name": "Arabic", "Japanese_Name": "Arabic" },
+          { ･
+          { ･
+          { ･
+          { "Name": "Chinese (Traditional)", "Code": "zh-TW", "English_Name": "Chinese (Traditional)", "Japanese_Name": "Chinese (Traditional)" }
+          { "Name": "XXXXX", "Code": "xx", "English_Name": "xxxx", "Japanese_Name": "XXXXX" }
         ]
-        ─────────────────────────────────  
+        ───────────────────────────────────────────────────────────────────────────────────────────  
 
-      手順 4 : SettingsForm に自動反映  
-        LangManager が自動で読み込むため、コード変更は不要。  
+      Step 4: Automatically reflect in SettingsForm  
+        LangManager is loaded automatically, so no code changes are required.  
 
-### 11.2 新しいアイコンテーマの追加  
-    Drive Indicator AI のアイコンは PNG ベースで、以下のフォルダ構造になっています :   
-
-      Resources/  
-        └─ Icons/  
-              └─ Default/  
-                    ├─ 16/  
-                    └─ 32/  
-
-#### 11.2.1 新テーマを追加する方法  
-    1. 新しいテーマフォルダーを作成  
+### 11.2 Adding a New Icon Theme  
+    Drive Indicator AI icons are PNG-based and have the following folder structure:  
 
       Resources/  
         └─ Icons/  
-              ├─ Default/  
-              └─ MyTheme/  
+               └─ Default/  
+                      ├─ 16/  
+                      └─ 32/  
 
-    2. 新しいテーマフォルダー内に 16/ と 32/ フォルダーを作成  
+#### 11.2.1 How to Add a New Theme  
+    1. Create a new theme folder  
+
+      Resources/  
+        └─ Icons/  
+               ├─ Default/  
+               └─ MyTheme/  
+
+    2. Create 16/ and 32/ folders within the new theme folder  
 
       MyTheme/  
-        ├─ 16/  ← W16×H16ドット用フォルダー  
-        └─ 32/  ← W32×H32ドット用フォルダー  
+        ├─ 16/  ← Folder for W16×H16 dots  
+        └─ 32/  ← Folder for W32×H32 dots  
 
-    3. 16/ と 32/ に新しい PNG を配置  
-      ファイル名は既存と同じにする (例 : write_off_read_off.png, write_off_read_on_.png)  
+    3. Place new PNGs in 16/ and 32/  
+      Use the same file names as the existing ones.  
+      (Example: write_off_read_off.png, write_off_read_on_.png)  
 
       MyTheme/  
         ├─ 16/  
-        │   ├─ write_off_Read_off.png  ← W8×H16ドット Write OFF, Read OFF  
-        │   ├─ write_off_Read_on_.png  ← W8×H16ドット Write OFF, Read ON  
-        │   ├─ write_on__Read_off.png  ← W8×H16ドット Write ON , Read OFF  
-        │   └─ write_on__Read_on_.png  ← W8×H16ドット Write ON , Read ON  
+        │    ├─ write_off_Read_off.png ← W8×H16 dots Write OFF, Read OFF  
+        │    ├─ write_off_Read_on_.png ← W8×H16 dots Write OFF, Read ON  
+        │    ├─ write_on__Read_off.png ← W8×H16 dots Write ON , Read OFF  
+        │    └─ write_on__Read_on_.png ← W8×H16 dots Write ON , Read ON  
         └─ 32/
-             ├─ write_off_Read_off.png  ← W16×H32ドット Write OFF, Read OFF  
-             ├─ write_off_Read_on_.png  ← W16×H32ドット Write OFF, Read ON  
-             ├─ write_on__Read_off.png  ← W16×H32ドット Write ON , Read OFF  
-             └─ write_on__Read_on_.png  ← W16×H32ドット Write ON , Read ON  
+              ├─ write_off_Read_off.png ← W16×H32 dots Write OFF, Read OFF  
+              ├─ write_off_Read_on_.png ← W16×H32 dots Write OFF, Read ON  
+              ├─ write_on__Read_off.png ← W16×H32 dots Write ON , Read OFF  
+              └─ write_on__Read_on_.png ← W16×H32 dots Write ON , Read ON  
 
-    4. SettingsManager のアイコン画像フォルダ設定で新しいテーマフォルダーパスを指定  
-      "アプリケーションフォルダー/Resources/Icons/MyTheme/"  
+    4. Specify the new theme folder path in the SettingsManager icon image folder settings.  
+      "Application folder/Resources/Icons/MyTheme/"  
 
-#### 11.2.2 メリット  
-    ･ 再コンパイル不要  
-    ･ ユーザーが自由にテーマを作れる  
-    ･ DPI に応じて自動切り替えされる  
+#### 11.2.2 Benefits  
+    · No recompilation required  
+    · Users can freely create their own themes  
+    · Automatically switches based on DPI  
 
-### 11.3 新しい監視方式の追加 (高度な拡張)  
-    Drive Indicator AI の監視ロジックは以下の構造になっています :  
+### 11.3 Adding a New Monitoring Method (Advanced Extension)  
+    The Drive Indicator AI monitoring logic has the following structure :  
 
       DriveMonitor  
-        ├─ PerfCounter (通常ドライブ)  
-        └─ EtwRamIoMonitor (RAMドライブ)  
+        ├─ PerfCounter (normal drive)  
+        └─ EtwRamIoMonitor (RAM drive)  
 
-#### 11.3.1 新しい監視方式を追加する場合  
-    例 : NVMe 専用 API、WMI、SMART 情報など  
-      1. 新しい監視クラスを作成  
-        ･ 例 : NvmeIoMonitor  
-      2. DriveMonitor に統合  
-        ･ Update() 内で新しい監視結果を DriveStatus に反映  
-      3. DriveStatus に必要なプロパティを追加  
+#### 11.3.1 Adding a New Monitoring Method  
+    Example : NVMe-specific API, WMI, SMART information, etc.  
+      1. Create a new monitoring class  
+        ･ Example: NvmeIoMonitor  
+      2. Integrate into DriveMonitor  
+        • Reflect new monitoring results in DriveStatus within Update()  
+      3. Add necessary properties to DriveStatus  
 
-#### 11.3.2 設計上のメリット  
-    ･ DriveMonitor が ｢統合ポイント｣ になっているため追加が容易  
-    ･ UI や描画ロジックは変更不要  
-    ･ ログで動作確認がしやすい  
+#### 11.3.2 Design Benefits  
+    • DriveMonitor is the "integration point," making additions easy  
+    • No changes required to the UI or drawing logic  
+    • Operation can be easily verified using logs  
 
-### 11.4 設定項目の追加  
-    SettingsManager は JSON ベースで柔軟に拡張できます。  
+### 11.4 Adding Settings  
+    SettingsManager is JSON-based and can be flexibly extended.  
 
-#### 11.4.1 手順  
-    1. Settings クラスにプロパティを追加  
-    2. SettingsManager.Load() / Save() に項目を追加  
-    3. SettingsForm に UI を追加  
-    4. TrayIconManager や DriveMonitor で参照  
+#### 11.4.1 Procedure  
+    1. Add properties to the Settings class  
+    2. Add items to SettingsManager.Load() / Save()  
+    3. Add UI to SettingsForm  
+    4. Reference with TrayIconManager or DriveMonitor  
 
-#### 11.4.2 設計上のメリット  
-    ･ 設定ファイルが壊れてもデフォルト値で復元  
-    ･ UI とロジックが分離されているため安全  
+#### 11.4.2 Design Benefits  
+    ･ Restores default values ​​even if the settings file is corrupted  
+    ･ Safety due to separation of UI and logic  
 
-### 11.5 UI の拡張 (SettingsForm の項目追加)  
-    SettingsForm は ApplyLanguage() によって UI テキストが一括管理されているため、  
-    項目を追加しても国際化が壊れにくい構造です。  
+### 11.5 UI Extending (Adding Items to SettingsForm)  
+    SettingsForm manages UI text centrally using ApplyLanguage(),  
+    so adding items does not disrupt internationalization.  
 
-#### 11.5.1 拡張手順  
-    1. コントロールを追加  
-    2. Lang.T("Key") を使ってテキストを設定  
-    3. SettingsManager と値を同期  
+#### 11.5.1 Extension Procedure  
+    1. Add a control  
+    2. Set the text using Lang.T("Key")  
+    3. Synchronize values ​​with SettingsManager  
 
-#### 11.5.2 注意点  
-    ･ DPI サンプル描画を追加する場合は IconRenderer を利用  
-    ･ Anchor / Dock を適切に設定して UI 崩れを防止  
+#### 11.5.2 Notes  
+    ･ Use IconRenderer when adding DPI sample drawing  
+    ･ Set Anchor/Dock appropriately to prevent UI collapse  
 
-### 11.6 アイコン描画ロジックの拡張  
-    IconRenderer は以下のように責務が分離されています :  
-      ･ PNG 読み込み  
-      ･ DPI 判定  
-      ･ DriveLetter 描画  
-      ･ 色の合成  
+### 11.6 Extending Icon Drawing Logic  
+    IconRenderer's responsibilities are separated as follows :  
+      ･ PNG loading  
+      ･ DPI detection  
+      ･ DriveLetter drawing  
+      ･ Color blending  
 
-#### 11.6.1 新しい描画要素を追加する場合  
-    例 : I/O グラフ、アニメーション、使用率バーなど  
-      1. RenderIcon() に描画処理を追加  
-      2. DriveStatus に必要な情報を追加  
-      3. SettingsManager に ON/OFF 設定を追加 (任意)  
+#### 11.6.1 Adding New Drawing Elements  
+    Examples: I/O graphs, animations, utilization bars, etc.  
+      1. Add drawing processing to RenderIcon()  
+      2. Add necessary information to DriveStatus  
+      3. Add ON/OFF settings to SettingsManager (optional)  
 
-#### 11.6.2 設計上のメリット  
-    ･ 描画ロジックが 1 箇所に集約されている  
-    ･ DPI 対応は既存の仕組みを流用できる  
+#### 11.6.2 Design Benefits  
+    ･ Drawing logic is centralized in one place  
+    ･ DPI support can utilize existing mechanisms  
 
-### 11.7 拡張性のまとめ  
-    Drive Indicator AI は、以下の点で非常に拡張しやすい設計になっています :  
-      1. JSON ベースの国際化  
-        → 言語追加が簡単  
-      2. PNG ベースのアイコンテーマ  
-        → 見た目を自由に変更可能  
-      3. DriveMonitor の統合構造  
-        → 新しい監視方式を追加しやすい  
-      4. SettingsManager の柔軟性  
-        → 設定項目の追加が容易  
-      5. IconRenderer の責務分離  
-        → 描画ロジックの拡張が安全  
-      6. UI とロジックの完全分離  
-        → 変更が他の部分に影響しにくい  
-    Drive Indicator AI は、個人ユーティリティでありながら、  
-    企業向けアプリ並みの拡張性を持つ設計になっています。  
+### 11.7 Scalability Summary  
+    Drive Indicator AI is designed to be highly extensible in the following ways :  
+      1. JSON-based internationalization  
+        → Adding languages ​​is easy  
+      2. PNG-based icon themes  
+        → Appearance can be freely changed  
+      3. DriveMonitor's integrated structure  
+        → Easily adding new monitoring methods  
+      4. SettingsManager flexibility  
+        → Easily adding settings  
+      5. IconRenderer separation of responsibilities  
+        → Safely extending drawing logic  
+      6. Complete separation of UI and logic  
+        → Changes are less likely to affect other parts  
+    Although Drive Indicator AI is a personal utility,  
+    it is designed to be extensible on the same level as an enterprise app.  
 
-[←前へ](10_i18n(en).md) | [次へ→](12_Limitations(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](10_i18n(en).md) | [Next→](12_Limitations(en).md) | [Top](00_Technical_documents(en).md)  

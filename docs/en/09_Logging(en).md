@@ -1,111 +1,111 @@
-[←前へ](08_Startup(en).md) | [次へ→](09_i18n(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](08_Startup(en).md) | [Next→](09_i18n(en).md) | [Top](00_Technical_documents(en).md)  
 
-## 9\. ログ設計 (Logging System)  
-    Drive Indicator AI のログ機能は、アプリ内部の動作や例外を記録し、  
-    ユーザー環境で発生した問題を迅速に特定するために設計されています。  
-    ログは TEMP フォルダ配下に専用ディレクトリを作成し、1MB ローテーション方式で管理されます。  
-    この仕組みにより、ログが肥大化せず、長期間の運用でも安定して動作します。  
+## 9\. Logging System
+    Drive Indicator AI's logging function is designed to record internal app operations and exceptions,  
+    allowing for quick identification of problems that occur in the user's environment.  
+    Logs are managed in a dedicated directory under the TEMP folder using a 1MB rotation method.  
+    This mechanism prevents logs from becoming bloated and ensures stable operation even over long periods of operation.  
 
-### 9.1 LogHelper の役割  
-    LogHelper は Drive Indicator AI 全体のログ管理を担当するコンポーネントです。  
+### 9.1 Role of LogHelper  
+    LogHelper is the component responsible for overall log management for Drive Indicator AI.  
 
       LogHelper  
         ├─ LogWrite()  
         ├─ ClearLog()  
         ├─ CreateLogFolder()  
         ├─ RotateLog()  
-        └─ IsEnabled (設定による ON/OFF)  
+        └─ IsEnabled (ON/OFF via configuration)  
 
-    主な役割 :  
-      • ログファイルの生成  
-      • ログ書き込み (スレッドセーフ)  
-      • ローテーション (1MB 超で自動切り替え)  
-      • ログフォルダの管理  
-      • 設定によるログ ON/OFF  
+    Main functions :  
+      • Log file generation  
+      • Log writing (thread-safe)  
+      • Rotation (automatic rotation when file size exceeds 1MB)  
+      • Log folder management  
+      • Log ON/OFF via configuration  
 
-### 9.2 ログファイルの保存場所  
-    ログは TEMP フォルダ配下に保存されます。  
+### 9.2 Log File Storage Location  
+    Logs are stored in the TEMP folder.  
 
-      %TEMP%\\DriveIndicatorAI\\Logs\\  
+      %TEMP%\DriveIndicatorAI\Logs\  
         ├─ MessagesLog.log  
         └─ MessagesLog.old  
 
-    この構造のメリット  
-      • 権限不要  
-      • ポータブルアプリでも問題なし  
-      • ユーザーが簡単にアクセスできる  
-      • アンインストール時に残っても安全  
+    Advantages of this structure  
+      • No permissions required  
+      • Suitable for portable apps  
+      • Easy user access  
+      • Safe to remain after uninstallation  
 
-### 9.3 ログ書き込み (LogWrite)  
-    LogWrite は、ログを 1行単位で書き込むメソッドです。  
+### 9.3 Log Writing (LogWrite)  
+    LogWrite is a method for writing logs line by line.  
 
-#### 9.3.1 特徴  
-    • スレッドセーフ (lock による排他制御)  
-    • タイムスタンプ付き  
-    • 例外発生時も安全に動作  
-    • ログ無効化時は即 return  
+#### 9.3.1 Features  
+    • Thread-safe (exclusive control using lock)  
+    • Includes timestamps  
+    • Safe operation even when exceptions occur  
+    • Immediate return when logging is disabled  
 
-#### 9.3.2 ログ形式 (例)  
-    ──────────────────────────────────  
-    \[2025-12-12 14:33:21] DriveMonitor : Read=10240 Write=0 Drive=C  
-    \[2025-12-12 14:33:22] ETW : R drive write 4096 bytes  
-    \[2025-12-12 14:33:23] IconRenderer : DPI=144 IconSize=32px  
-    ──────────────────────────────────  
+#### 9.3.2 Log Format (Example)  
+    ───────────────────────────────────────────────────────────────  
+    [2025-12-12 14:33:21] DriveMonitor: Read=10240 Write=0 Drive=C  
+    [2025-12-12 14:33:22] ETW: R drive write 4096 bytes  
+    [2025-12-12 14:33:23] IconRenderer: DPI=144 IconSize=32px  
+    ───────────────────────────────────────────────────────────────  
 
-### 9.4 ローテーション (RotateLog)  
-    ログファイルが 1MB を超えた場合、以下の処理が自動で行われます :  
-      MessagesLog.old ← MessagesLog.log をリネーム  
-      MessagesLog.log ← 新規作成  
+### 9.4 Rotation (RotateLog)  
+    If the log file exceeds 1MB, the following process will be performed automatically :  
+      MessagesLog.old ← Rename MessagesLog.log  
+      MessagesLog.log ← Create a new file  
 
-#### 9.4.1 ローテーションのメリット  
-    • ログが肥大化しない  
-    • 長期間運用でも安定  
-    • 古いログも 1世代だけ保持  
+#### 9.4.1 Benefits of Rotation  
+    • Logs do not become bloated  
+    • Stable even over long periods of operation  
+    • Only one generation of old logs is retained  
 
-### 9.5 ログの利用シーン  
-    Drive Indicator AI のログは、以下のような場面で役立ちます :  
-      1. ETW が動作しない場合の原因調査  
-        • セッション開始エラー  
-        • イベント受信エラー  
-      2. PerformanceCounter の例外  
-        • インスタンスが存在しない  
-        • アクセス権の問題  
-      3. アイコン描画の問題  
-        • PNG 読み込みエラー  
-        • DPI 判定の不具合  
-      4. 自動起動の問題  
-        • schtasks.exe のエラー出力  
-      5. 設定ファイルの読み込みエラー  
-        • JSON パースエラー  
-        • ファイル破損  
+### 9.5 Log Usage Scenarios  
+    Drive Indicator AI logs are useful in the following situations :  
+      1. Investigating the cause when ETW does not work  
+        • Session start error  
+        • Event reception error  
+      2. PerformanceCounter exception  
+        • Instance does not exist  
+        • Access rights issue  
+      3. Icon drawing issue  
+        • PNG loading error  
+        • DPI detection issue  
+      4. Auto-start issue  
+        • schtasks.exe error output  
+      5. Configuration file loading error  
+        • JSON parsing error  
+        • File corruption  
 
-### 9.6 設計上の工夫  
-    Drive Indicator AI のログ設計には、以下の工夫があります :  
-      1. ログ無効化が可能  
-          SettingsManager でログを OFF にできるため、ユーザー環境で不要なログを抑制できる。  
-      2. スレッドセーフ  
-          ETW スレッド・監視スレッド・UI スレッドなど、複数スレッドから同時に書き込んでも安全。  
-      3. ローテーションで肥大化防止  
-          1MB超 で自動切り替え。  
-          長期運用でも安定。  
-      4. TEMP フォルダを使用  
-          権限不要で、どの環境でも確実に書き込める。  
-      5. 例外時もログを残す  
-          try/catch 内で LogWrite を呼ぶため、問題発生時の原因が追跡しやすい。  
+### 9.6 Design Features  
+    Drive Indicator AI's log design has the following features :  
+      1. Logging can be disabled  
+          Logging can be turned off in SettingsManager, reducing unnecessary logging in the user environment.  
+      2. Thread-safe  
+          Safe for simultaneous writing from multiple threads, such as ETW threads, monitoring threads, and UI threads.  
+      3. Rotation prevents bloat  
+          Automatically switches when the file size exceeds 1MB.  
+          Stable even for long-term operation.  
+      4. Uses the TEMP folder  
+          No permissions are required, allowing reliable writing in any environment.  
+      5. Logs are retained even in the event of an exception  
+          LogWrite is called within a try/catch block, making it easy to track down the cause of a problem when it occurs.  
 
-### 9.7 ログフォルダの操作 (ユーザー向け)  
-    SettingsForm には ｢logフォルダを開く｣ ボタンがあり、ユーザーは簡単にログを確認できます。  
-      • 問題報告時にログを添付してもらえる  
-      • 開発者が原因を特定しやすい  
+### 9.7 Log Folder Operations (For Users)  
+    The SettingsForm has an "Open Log Folder" button, allowing users to easily view the log.  
+      • Logs can be attached when reporting issues.  
+      • Developers can easily identify the cause.  
 
-### 9.8 ログ設計のまとめ  
-    Drive Indicator AI のログシステムは :  
-      • 軽量  
-      • 堅牢  
-      • スレッドセーフ  
-      • ローテーション付き  
-      • デバッグ性が高い  
-    という、実用性と品質を両立した設計になっています。  
-    アプリの安定性を支える ｢縁の下の力持ち｣ と言えるコンポーネントです。  
+### 9.8 Log Design Summary  
+    Drive Indicator AI's log system is :  
+      • Lightweight  
+      • Robust  
+      • Thread-safe  
+      • Includes rotation  
+      • Highly debuggable  
+    It is designed to combine practicality and quality.  
+    It is a component that can be considered the "unsung hero" that supports the stability of the app.  
 
-[←前へ](08_Startup(en).md) | [次へ→](09_i18n(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](08_Startup(en).md) | [Next→](09_i18n(en).md) | [Top](00_Technical_documents(en).md)  

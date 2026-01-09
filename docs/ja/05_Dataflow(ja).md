@@ -1,6 +1,6 @@
 [←前へ](04_UI(ja).md) | [次へ→](06_DPI(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
-## 5\. データフロー詳細 (Data Flow Details)  
+## 5\. データフロー詳細  
     Drive Indicator AI は、  
       起動 → 設定読み込み → 監視開始 → アイコン描画 → 通知領域更新 → 終了処理  
     という一連の流れで動作します。  
@@ -34,7 +34,7 @@
       DriveMonitor.Update()  
         ├─ PerfCounter で通常ドライブの I/O を取得  
         ├─ EtwRamIoMonitor で RAMドライブ の I/O を取得  
-        └─ DriveStatus\[] を生成  
+        └─ DriveStatus[] を生成  
 
 #### 5.2.1 PerformanceCounter の処理  
     ･ LogicalDisk の ReadBytes/sec  
@@ -53,14 +53,14 @@
 <img src="images/Fig_(ja)_5.2.3.png" width="235" alt="Fig_5.2.3">
 
 ### 5.3 アイコン描画 → IconRenderer  
-    DriveStatus\[] を受け取った TrayIconManager は、IconRenderer にアイコン描画を依頼します。  
+    DriveStatus[] を受け取った TrayIconManager は、IconRenderer にアイコン描画を依頼します。  
 
-      IconRenderer.RenderIcons(DriveStatus\[])  
+      IconRenderer.RenderIcons(DriveStatus[])  
         ├─ DPI 判定 (16px / 32px)  
         ├─ PNG 読み込み  
         ├─ DriveLetter の描画 (FontHelper)  
         ├─ I/O 状態に応じた色の合成  
-        └─ Icon\[] を生成  
+        └─ Icon[] を生成  
 
 #### 5.3.1 DPI 判定  
     SettingsManager.Current.Dpi または Graphics.DpiX を参照し :  
@@ -69,19 +69,19 @@
     を自動選択。  
 
 #### 5.3.2 PNG の読み込み  
-      ･ 読み取りアイコン        : (write\_off\_read\_on\_.png)  
-      ･ 書き込みアイコン        : (write\_on\_\_read\_off.png)  
-      ･ アイドルアイコン        : (write\_off\_read\_off.png)  
-      ･ 両方アクティブアイコン  : (write\_on\_\_read\_on\_.png)  
+      ･ 読み取りアイコン        : (write_off_read_on_.png)  
+      ･ 書き込みアイコン        : (write_on__read_off.png)  
+      ･ アイドルアイコン        : (write_off_read_off.png)  
+      ･ 両方アクティブアイコン  : (write_on__read_on_.png)  
     を合成して 1つのアイコンにまとめる。  
 
 #### 5.3.3 DriveLetter の描画  
     FontHelper が DPI に応じたフォントを返すため、高 DPI でも文字が潰れない。  
 
 ### 5.4 通知領域アイコン更新 → TrayIconManager  
-    IconRenderer が生成した Icon\[] を受け取り、TrayIconManager が通知領域に反映します。  
+    IconRenderer が生成した Icon[] を受け取り、TrayIconManager が通知領域に反映します。  
 
-      TrayIconManager.UpdateIcons(Icon\[])  
+      TrayIconManager.UpdateIcons(Icon[])  
         ├─ NotifyIcon.Icon にセット  
         ├─ 古いアイコンを DestroyIcon で破棄  
         ├─ コンテキストメニューの更新  
@@ -110,7 +110,7 @@
     ･ スレッドを確実に終了  
 
 #### 5.5.2 アイコン破棄  
-    ･ GDI リソースをすべて解放  
+    ･ GDI リソースをすべて解放  
     ･ TEMP の PNG は残しても問題なし  
 
 #### 5.5.3 フォントキャッシュの破棄  

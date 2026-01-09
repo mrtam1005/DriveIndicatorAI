@@ -1,66 +1,64 @@
-[←前へ](07_ETW(en).md) | [次へ→](09_Logging(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](07_ETW(en).md) | [Next→](09_Logging(en).md) | [Top](00_Technical_documents(en).md)  
 
-## 8\. 自動実行 (StartupHelper)  
-    Drive Indicator AI は、Windows 起動時に自動でアプリを実行するために、  
-    タスクスケジューラ (Task Scheduler) を利用しています。  
-    一般的なアプリが使う ｢レジストリ Run キー｣ ではなく、  
-    あえてタスクスケジューラを採用した理由は以下の通りです :  
-      • 権限不要 (管理者権限なしで登録可能)  
-      • UAC の影響を受けない  
-      • Windows Update やセキュリティソフトに削除されにくい  
-      • 起動の安定性が高い  
-      • 実行条件を細かく制御できる  
-    Drive Indicator AI の自動実行は、実用性と堅牢性を最優先した設計になっています。  
+## 8\. Autorun (StartupHelper)  
+    Drive Indicator AI uses Task Scheduler to automatically run the application when Windows starts.  
+    We chose Task Scheduler instead of the "Registry Run key" used by most applications for the following reasons :  
+      • No permissions required (can be registered without administrator privileges)  
+      • Not affected by UAC  
+      • Less likely to be deleted by Windows Update or security software  
+      • High startup stability  
+      • Detailed control over execution conditions  
+    Drive Indicator AI's autorun feature is designed with practicality and robustness as its top priorities.  
 
-### 8.1 StartupHelper の役割  
-    StartupHelper は、自動実行の ON/OFF を管理するコンポーネントです。  
+### 8.1 Role of StartupHelper  
+    StartupHelper is a component that manages the on/off status of autorun.  
 
       StartupHelper  
-        ├─ RegisterStartupTask()  
-        ├─ UnregisterStartupTask()  
-        ├─ IsStartupRegistered()  
-        └─ CreateTaskXml()  
+      ├─ RegisterStartupTask()  
+      ├─ UnregisterStartupTask()  
+      ├─ IsStartupRegistered()  
+      └─ CreateTaskXml()  
 
-    主な役割は以下の通り :  
-      • タスクスケジューラに登録する XML を生成  
-      • schtasks.exe を使ってタスクを登録/削除  
-      • 現在の登録状態を確認  
-      • SettingsForm と連携して UI から操作可能にする  
+     Its main functions are as follows :  
+      • Generates XML to be registered in the Task Scheduler  
+      • Registers/deletes tasks using schtasks.exe  
+      • Checks the current registration status  
+      • Works with SettingsForm to enable operation from the UI  
 
-### 8.2 タスクスケジューラ方式の仕組み  
-    Drive Indicator AI は、以下のコマンドを内部で実行します :  
+### 8.2 Task Scheduler Method Mechanism  
+    Drive Indicator AI internally executes the following commands :  
 
-      ● 登録 (RegisterStartupTask)  
-      ──────────────────────────────────  
+      ● Registration (RegisterStartupTask)  
+      ───────────────────────────────────────────────────────────  
       schtasks /Create /TN "DriveIndicatorAI" /XML "task.xml" /F  
-      ──────────────────────────────────  
+      ───────────────────────────────────────────────────────────  
 
-      ● 削除 (UnregisterStartupTask)  
-      ──────────────────────────────────  
+      ● Deletion (UnregisterStartupTask)  
+      ───────────────────────────────────────────────────────────  
       schtasks /Delete /TN "DriveIndicatorAI" /F  
-      ──────────────────────────────────  
+      ───────────────────────────────────────────────────────────  
 
-      ● 登録確認 (IsStartupRegistered)  
-      ──────────────────────────────────  
+      ● Registration Verification (IsStartupRegistered)  
+      ───────────────────────────────────────────────────────────  
       schtasks /Query /TN "DriveIndicatorAI"  
-      ──────────────────────────────────  
+      ───────────────────────────────────────────────────────────  
 
-    これらはすべて 管理者権限不要 で実行できます。  
+    All of these can be performed without administrator privileges.  
 
-### 8.3 タスク XML の構造  
-    StartupHelper は、タスクスケジューラに登録するための XML を動的に生成します。  
-    XML の主な内容 :  
+### 8.3 Task XML Structure  
+    StartupHelper dynamically generates the XML for registration with the Task Scheduler.  
+    XML Key Contents :  
       • LogonTrigger  
-          → ユーザーがログオンしたときに実行  
+          → Executes when the user logs on  
       • Exec Action  
-          → DriveIndicatorAI.exe を実行  
+          → Executes DriveIndicatorAI.exe  
       • RunLevel  
-          → “LeastPrivilege” を指定 (管理者権限不要)  
+          → Specify "LeastPrivilege" (Administrator privileges not required)  
       • WorkingDirectory  
-          → アプリのフォルダを指定  
+          → Specify the app's folder  
 
-    ● XML の例 (概略)  
-    ──────────────────────────────────  
+    ● XML Example (Outline)  
+    ──────────────────────────────────────────────────────────────────  
     <Task>
       <Triggers>
         <LogonTrigger>
@@ -89,59 +87,58 @@
 
       <Actions Context=""Author"">
         <Exec>
-          <Command>""ApplicationPath\\DriveIndicatorAI.exe""</Command>
+          <Command>""ApplicationPath\DriveIndicatorAI.exe""</Command>
         </Exec>
       </Actions>
     </Task>
-    ──────────────────────────────────  
+    ──────────────────────────────────────────────────────────────────  
 
-    Drive Indicator AI はこの XML を TEMP に書き出し、  
-    schtasks.exe に渡して登録します。  
+    Drive Indicator AI writes this XML to TEMP and passes it to schtasks.exe for registration.  
 
-### 8.4 自動実行の ON/OFF の流れ  
-    SettingsForm の ｢Auto Start｣ チェックボックスを操作すると :  
-    ──────────────────────────────────  
-    ON  → StartupHelper.RegisterStartupTask()  
+### 8.4 How to Turn Auto Start On/Off  
+    When you operate the "Auto Start" checkbox in the SettingsForm :  
+    ────────────────────────────────────────────  
+    ON → StartupHelper.RegisterStartupTask()  
     OFF → StartupHelper.UnregisterStartupTask()  
-    ──────────────────────────────────  
+    ────────────────────────────────────────────  
 
-    ● ON の場合  
-      1. XML を生成  
-      2. TEMP に保存  
-      3. schtasks.exe /Create を実行  
-      4. 成功したら設定ファイルに保存  
+    ● If ON  
+      1. Generate XML  
+      2. Save to TEMP  
+      3. Execute schtasks.exe /Create  
+      4. If successful, save to the settings file  
 
-    ● OFF の場合  
-      1. schtasks.exe /Delete を実行  
-      2. 設定ファイルに保存  
+    ● If OFF  
+      1. Execute schtasks.exe /Delete  
+      2. Save to the settings file  
 
-### 8.5 設計上の工夫  
-    Drive Indicator AI の自動起動は、以下の点で非常に堅牢です。  
-      1. 管理者権限不要  
-          RunLevel=LeastPrivilege のため、一般ユーザー権限で登録可能。  
-      2. Windows Update で消されにくい  
-          レジストリ Run キーは OS 更新で消えることがあるが、タスクスケジューラは影響を受けにくい。  
-      3. 実行フォルダを正しく設定  
-          WorkingDirectory を指定することで、相対パスのリソース読み込みが安定。  
-      4. XML を動的生成  
-          アプリのパスが変わっても対応可能。  
-      5. エラー時はログに記録  
-          schtasks のエラー出力を LogHelper に記録するため、問題発生時の調査が容易。  
+### 8.5 Design Features  
+    Drive Indicator AI's auto-start feature is extremely robust in the following ways :  
+      1. No administrator privileges required  
+          Since RunLevel=LeastPrivilege, it can be registered with general user privileges.  
+      2. Not easily deleted by Windows Update  
+          Registry Run keys may be deleted by OS updates, but Task Scheduler is less affected.  
+      3. Correctly set the execution folder  
+          Specifying the WorkingDirectory ensures stable loading of relative path resources.  
+      4. Dynamically generate XML  
+          Can handle changes to the application path.  
+      5. Errors are logged  
+          schtasks error output is recorded in LogHelper, making it easy to investigate problems when they occur.  
 
-### 8.6 動作確認方法 (開発者向け)  
-    1. SettingsForm → Auto Start を ON  
-    2. Windows の ｢タスクスケジューラ｣ を開く  
-    3. ｢タスクスケジューラライブラリ｣ に DriveIndicatorAI\_AutoStart が登録されていることを確認  
-    4. Windows を再起動  
-    5. タスクトレイに DriveIndicatorAI が表示されることを確認  
+### 8.6 How to Test Operation (For Developers)  
+    1. Turn on Auto Start in SettingsForm  
+    2. Open the Windows Task Scheduler  
+    3. Verify that DriveIndicatorAI\_AutoStart is registered in the Task Scheduler Library  
+    4. Restart Windows  
+    5. Verify that DriveIndicatorAI appears in the task tray  
 
-### 8.7 自動実行設計のまとめ  
-    Drive Indicator AI の自動実行は :  
-      • 安全  
-      • 権限不要  
-      • 安定  
-      • 拡張性が高い  
-    という、非常に優れた設計になっています。  
-    一般的なユーティリティよりも一段上の品質で、企業向けアプリでも通用するレベルです。  
+### 8.7 Summary of Auto-Execution Design  
+    Drive Indicator AI's auto-execution design is :  
+      • Secure  
+      • No permission required  
+      • Stable  
+      • Highly scalable  
+    It has an excellent design.  
+    It is a step above general utilities in quality and is suitable for enterprise applications.  
 
-[←前へ](07_ETW(en).md) | [次へ→](09_Logging(en).md) | [先頭へ](00_Technical_documents(en).md)  
+[←Previous](07_ETW(en).md) | [Next→](09_Logging(en).md) | [Top](00_Technical_documents(en).md)  

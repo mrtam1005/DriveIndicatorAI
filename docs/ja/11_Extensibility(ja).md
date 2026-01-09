@@ -1,6 +1,6 @@
 [←前へ](10_i18n(ja).md) | [次へ→](12_Limitations(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
-## 11. 拡張方法 (Extensibility Guide)  
+## 11. 拡張方法  
     Drive Indicator AI は、UI・監視ロジック・描画ロジック・国際化などが明確に分離されているため、  
     後から機能を追加したり、カスタマイズしたりするのが容易です。  
     この章では、開発者が Drive Indicator AI を拡張する際に必要なポイントをまとめます。  
@@ -15,7 +15,7 @@
         lang_xx.json の値を翻訳するだけ。  
 
       手順 3 : languages.json に追加  
-        ─────────────────────────────────  
+        ───────────────────────────────────────────────────────────────────────────────────────────  
         [
           { "Name": "عربي", "Code": "ar", "English_Name": "Arabic", "Japanese_Name": "アラビア語" },
           {    ･
@@ -24,7 +24,7 @@
           { "Name": "中国語 (繁体字) ", "Code": "zh-TW", "English_Name": "Chinese (Traditional)", "Japanese_Name": "中国語 (繁体字) " }
           { "Name": "ＸＸＸＸ", "Code": "xx", "English_Name": "xxxx", "Japanese_Name": "ＸＸＸＸ語" }
         ]
-        ─────────────────────────────────  
+        ───────────────────────────────────────────────────────────────────────────────────────────  
 
       手順 4 : SettingsForm に自動反映  
         LangManager が自動で読み込むため、コード変更は不要。  
@@ -34,17 +34,17 @@
 
       Resources/  
         └─ Icons/  
-              └─ Default/  
-                    ├─ 16/  
-                    └─ 32/  
+               └─ Default/  
+                      ├─ 16/  
+                      └─ 32/  
 
 #### 11.2.1 新テーマを追加する方法  
     1. 新しいテーマフォルダーを作成  
 
       Resources/  
         └─ Icons/  
-              ├─ Default/  
-              └─ MyTheme/  
+               ├─ Default/  
+               └─ MyTheme/  
 
     2. 新しいテーマフォルダー内に 16/ と 32/ フォルダーを作成  
 
@@ -53,19 +53,20 @@
         └─ 32/  ← W32×H32ドット用フォルダー  
 
     3. 16/ と 32/ に新しい PNG を配置  
-      ファイル名は既存と同じにする (例 : write_off_read_off.png, write_off_read_on_.png)  
+      ファイル名は既存と同じにする  
+      (例 : write_off_read_off.png, write_off_read_on_.png)  
 
       MyTheme/  
         ├─ 16/  
-        │   ├─ write_off_Read_off.png  ← W8×H16ドット Write OFF, Read OFF  
-        │   ├─ write_off_Read_on_.png  ← W8×H16ドット Write OFF, Read ON  
-        │   ├─ write_on__Read_off.png  ← W8×H16ドット Write ON , Read OFF  
-        │   └─ write_on__Read_on_.png  ← W8×H16ドット Write ON , Read ON  
+        │    ├─ write_off_Read_off.png  ← W8×H16ドット Write OFF, Read OFF  
+        │    ├─ write_off_Read_on_.png  ← W8×H16ドット Write OFF, Read ON  
+        │    ├─ write_on__Read_off.png  ← W8×H16ドット Write ON , Read OFF  
+        │    └─ write_on__Read_on_.png  ← W8×H16ドット Write ON , Read ON  
         └─ 32/
-             ├─ write_off_Read_off.png  ← W16×H32ドット Write OFF, Read OFF  
-             ├─ write_off_Read_on_.png  ← W16×H32ドット Write OFF, Read ON  
-             ├─ write_on__Read_off.png  ← W16×H32ドット Write ON , Read OFF  
-             └─ write_on__Read_on_.png  ← W16×H32ドット Write ON , Read ON  
+              ├─ write_off_Read_off.png  ← W16×H32ドット Write OFF, Read OFF  
+              ├─ write_off_Read_on_.png  ← W16×H32ドット Write OFF, Read ON  
+              ├─ write_on__Read_off.png  ← W16×H32ドット Write ON , Read OFF  
+              └─ write_on__Read_on_.png  ← W16×H32ドット Write ON , Read ON  
 
     4. SettingsManager のアイコン画像フォルダ設定で新しいテーマフォルダーパスを指定  
       "アプリケーションフォルダー/Resources/Icons/MyTheme/"  

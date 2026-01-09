@@ -1,6 +1,6 @@
 [←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
-## 1\. 概要 (Overview)  
+## 1\. 概要  
 
 ### 1.1 Drive Indicator AI とは  
     Drive Indicator AI は、Windows のストレージ I/O (読み取り・書き込み) 状況を  
@@ -53,4 +53,3 @@
 <img src="images/Fig_(ja)_1.4.png" width="298" alt="Fig_2.1"><br>
 
 [←前へ](00_Technical_documents(ja).md) | [次へ→](02_Architecture(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
-
