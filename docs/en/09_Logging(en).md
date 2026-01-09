@@ -1,4 +1,4 @@
-[←Previous](08_Startup(en).md) | [Next→](09_i18n(en).md) | [Top](00_Technical_documents(en).md)  
+[←Previous](08_Startup(en).md) | [Next→](10_i18n(en).md) | [Top](00_Technical_documents(en).md)  
 
 ## 9\. Logging System
     Drive Indicator AI's logging function is designed to record internal app operations and exceptions,  
@@ -108,4 +108,4 @@
     It is designed to combine practicality and quality.  
     It is a component that can be considered the "unsung hero" that supports the stability of the app.  
 
-[←Previous](08_Startup(en).md) | [Next→](09_i18n(en).md) | [Top](00_Technical_documents(en).md)  
+[←Previous](08_Startup(en).md) | [Next→](10_i18n(en).md) | [Top](00_Technical_documents(en).md)  

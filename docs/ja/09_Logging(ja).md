@@ -1,4 +1,4 @@
-[←前へ](08_Startup(ja).md) | [次へ→](09_i18n(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
+[←前へ](08_Startup(ja).md) | [次へ→](10_i18n(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
 
 ## 9\. ログ設計  
     Drive Indicator AI のログ機能は、アプリ内部の動作や例外を記録し、  
@@ -108,4 +108,4 @@
     という、実用性と品質を両立した設計になっています。  
     アプリの安定性を支える ｢縁の下の力持ち｣ と言えるコンポーネントです。  
 
-[←前へ](08_Startup(ja).md) | [次へ→](09_i18n(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
+[←前へ](08_Startup(ja).md) | [次へ→](10_i18n(ja).md) | [先頭へ](00_Technical_documents(ja).md)  
